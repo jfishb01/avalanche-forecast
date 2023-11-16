@@ -1,2 +1,7 @@
 black
 pytest
+pytz
+fastapi<1.0
+uvicorn[standard]<1.0
+requests<3.0
+pydantic<3.0
