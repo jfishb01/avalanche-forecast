@@ -12,9 +12,9 @@ AVALANCHE_FORECAST_REPO=/path/to/this/repo
 
 cd_avalanche_forecast() {
   cd $AVALANCHE_FORECAST_REPO
-  . $AVALANCHE_FORECAST_REPO/utils/terminal_aliases.sh
+  . $AVALANCHE_FORECAST_REPO/terminal_aliases.sh
 }
 ```
 
 Close out of your current terminal tab and reopen it. You can now run `cd_avalanche_forecast` to cd into this
-repo. This will give you access to all the utility terminal aliases in `utils/terminal_aliases.sh`.
+repo. This will give you access to all the utility terminal aliases in `terminal_aliases.sh`.
