@@ -5,7 +5,7 @@ import requests
 from typing import Iterable
 from datetime import date, datetime, timedelta, time
 
-from src.ingestion.avalanche_forecast.types import RawAvalancheForecast
+from src.ingestion.avalanche_forecast.custom_types import RawAvalancheForecast
 
 
 def get_url(analysis_date: date) -> str:

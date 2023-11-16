@@ -4,7 +4,7 @@ from unittest.mock import patch
 from requests import HTTPError
 
 from src.ingestion.avalanche_forecast.distributors.caic import extract, get_url
-from src.ingestion.avalanche_forecast.types import RawAvalancheForecast
+from src.ingestion.avalanche_forecast.custom_types import RawAvalancheForecast
 
 
 @pytest.fixture

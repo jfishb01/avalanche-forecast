@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 
 from src.utils.loggers import set_console_logger
 from src.ingestion.avalanche_forecast.distributors import caic
-from src.ingestion.avalanche_forecast.types import (
+from src.ingestion.avalanche_forecast.custom_types import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
 )

@@ -8,7 +8,7 @@ from typing import Iterable
 from fastapi import HTTPException
 
 from src.ingestion.avalanche_forecast import extract
-from src.ingestion.avalanche_forecast.types import RawAvalancheForecast
+from src.ingestion.avalanche_forecast.custom_types import RawAvalancheForecast
 from src.ingestion.avalanche_forecast.distributors import caic
 
 
