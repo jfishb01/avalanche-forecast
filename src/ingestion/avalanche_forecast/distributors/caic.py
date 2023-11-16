@@ -1,4 +1,4 @@
-"""Extract and transform avalanche forecasts from the Colorado Avalanche Information Center"""
+"""Extract and transform avalanche forecasts from the Colorado Avalanche Information Center."""
 
 import pytz
 import requests
