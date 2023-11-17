@@ -1,24 +1,104 @@
 """Extract and transform avalanche forecasts from the Colorado Avalanche Information Center."""
 
+import os
 import pytz
+import json
 import requests
-from typing import Iterable
+from typing import Iterable, List, Dict, Any
 from datetime import date, datetime, timedelta, time
 
-from src.ingestion.avalanche_forecast.custom_types import RawAvalancheForecast
+from src.ingestion.avalanche_forecast.common import (
+    ForecastDistributorEnum,
+    RawAvalancheForecast,
+    TransformedAvalancheForecast,
+    AvalancheRiskEnum,
+    AvalancheLikelihoodEnum,
+    AvalancheProblemEnum,
+    forecast_filename,
+)
 
 
-def get_url(analysis_date: date) -> str:
+def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
+    current_date = start_date
+    while current_date <= end_date:
+        response = requests.get(_get_url(current_date))
+        response.raise_for_status()
+        yield RawAvalancheForecast(analysis_date=current_date, forecast=response.text)
+        current_date += timedelta(days=1)
+
+
+def transform(
+    start_date: date, end_date: date, src: str
+) -> Iterable[List[TransformedAvalancheForecast]]:
+    current_date = start_date
+    while current_date <= end_date:
+        with open(
+            forecast_filename(ForecastDistributorEnum.CAIC, current_date, src), "r"
+        ) as f:
+            raw = json.loads(f.read())
+        transformed = []
+        for region in raw:
+            if region["type"].upper() != "AVALANCHEFORECAST":
+                continue
+
+            summary = ""
+            if len(region["avalancheSummary"]["days"]):
+                summary = region["avalancheSummary"]["days"][0]["content"]
+            elevation_dangers = region["dangerRatings"]["days"][0]
+            transformed.append(
+                TransformedAvalancheForecast(
+                    distributor=ForecastDistributorEnum.CAIC,
+                    analysis_date=current_date,
+                    forecast_date=current_date + timedelta(days=1),
+                    area_name=region["title"],
+                    area_id=region["areaId"],
+                    polygons=",".join(region["polygons"]),
+                    avalanche_summary=summary,
+                    danger_alp=AvalancheRiskEnum[elevation_dangers["alp"].upper()],
+                    danger_tln=AvalancheRiskEnum[elevation_dangers["tln"].upper()],
+                    danger_btl=AvalancheRiskEnum[elevation_dangers["btl"].upper()],
+                    **_get_avalanche_problems(region["avalancheProblems"]["days"]),
+                )
+            )
+        yield transformed
+        current_date += timedelta(days=1)
+
+
+def _get_url(analysis_date: date) -> str:
     datetime_str = datetime.combine(analysis_date, time(), tzinfo=pytz.UTC).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
     return f"https://avalanche.state.co.us/api-proxy/avid?_api_proxy_uri=/products/all?datetime={datetime_str}"
 
 
-def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
-    current_date = start_date
-    while current_date <= end_date:
-        response = requests.get(get_url(current_date))
-        response.raise_for_status()
-        yield RawAvalancheForecast(analysis_date=current_date, forecast=response.text)
-        current_date += timedelta(days=1)
+def _get_avalanche_problems(problems: List[Dict[str, Any]]) -> Dict[str, Any]:
+    transformed = {}
+    for i, problem in enumerate(problems):
+        if not problem:
+            continue
+
+        problem = problem[0]
+        transformed |= {
+            f"problem_{i}": AvalancheProblemEnum[problem["type"].upper()],
+            f"likelihood_{i}": AvalancheLikelihoodEnum[
+                problem["likelihood"].split("_")[0].upper()
+            ],
+            f"min_size_{i}": float(problem["expectedSize"]["min"]),
+            f"max_size_{i}": float(problem["expectedSize"]["max"]),
+            **_get_avalanche_problem_aspect_elevations(i, problem["aspectElevations"]),
+        }
+    return transformed
+
+
+def _get_avalanche_problem_aspect_elevations(
+    problem_number: int, aspect_elevations: List[str]
+) -> Dict[str, Any]:
+    elevations = ("alp", "tln", "btl")
+    aspects = ("n", "ne", "e", "se", "s", "sw", "w", "nw")
+    transformed = {}
+    for aspect in aspects:
+        for elevation in elevations:
+            transformed[f"{aspect}_{elevation}_{problem_number}"] = (
+                f"{aspect}_{elevation}" in aspect_elevations
+            )
+    return transformed

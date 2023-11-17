@@ -1,19 +1,18 @@
-"""Extract avalanche forecasts from regional forecast distributors and save them to the provided destination."""
-
 import os
-import logging
+import json
 import argparse
+import logging
 import traceback
-from datetime import date, datetime
 from pydantic import BaseModel
-from typing import Iterable, Callable
+from datetime import date, datetime
 from fastapi import FastAPI, HTTPException
+from typing import Iterable, List, Callable
 
 from src.utils.loggers import set_console_logger
 from src.ingestion.avalanche_forecast.distributors import caic
 from src.ingestion.avalanche_forecast.common import (
     ForecastDistributorEnum,
-    RawAvalancheForecast,
+    TransformedAvalancheForecast,
     forecast_filename,
 )
 
@@ -25,61 +24,60 @@ class ApiQueryParams(BaseModel):
     distributors: Iterable[ForecastDistributorEnum]
     start_date: date
     end_date: date
+    src: str
     dest: str
 
 
-@app.post("/extract")
-def extract(ApiQueryParams) -> None:
-    """Extracts avalanche forecasts from the provided distributors over a date range and saves them."""
+@app.post("/transform")
+def transform(ApiQueryParams) -> None:
     exceptions = []
     for distributor in ApiQueryParams.distributors:
+        logging.info(f"Processing distributor: {distributor}")
         try:
-            forecasts = _get_extractor(distributor)(
-                ApiQueryParams.start_date, ApiQueryParams.end_date
+            transformed_forecasts = _get_transformer(distributor)(
+                ApiQueryParams.start_date, ApiQueryParams.end_date, ApiQueryParams.src
             )
-            _save(distributor, forecasts, ApiQueryParams.dest)
+            _save(distributor, transformed_forecasts, ApiQueryParams.dest)
         except:
-            exceptions.append(str({distributor.name: traceback.format_exc()}))
+            exceptions.append(str({distributor: traceback.format_exc()}))
     if exceptions:
         exceptions_str = "\n".join(exceptions)
-        logging.error(exceptions_str)
+        logging.error(exceptions)
         raise HTTPException(
             status_code=500,
-            detail=f"Extraction failed with the following exceptions:\n\n{exceptions_str}",
+            detail=f"Transformation failed with the following exceptions:\n\n{exceptions_str}",
         )
 
 
-def _get_extractor(
+def _get_transformer(
     distributor: ForecastDistributorEnum,
-) -> Callable[[date, date], Iterable[RawAvalancheForecast]]:
-    """Factory to get an extraction method corresponding to the provided distributor."""
+) -> Callable[[date, date, str], Iterable[List[TransformedAvalancheForecast]]]:
     if distributor == ForecastDistributorEnum.CAIC:
-        return caic.extract
+        return caic.transform
     raise KeyError(f"Unknown distributor: {distributor}")
 
 
 def _save(
     distributor: ForecastDistributorEnum,
-    forecasts: Iterable[RawAvalancheForecast],
+    transformed: Iterable[List[TransformedAvalancheForecast]],
     dest: str,
 ) -> None:
-    """Save the forecasts to destination directory. Forecasts are saved to <dest>/<distributor>/<date>.json."""
     base_dir_created = False
-    for forecast_data in forecasts:
-        output_filename = forecast_filename(
-            distributor, forecast_data.analysis_date, dest
-        )
+    for transformed_data in transformed:
+        if not transformed_data:
+            continue
+
+        analysis_date = transformed_data[0].analysis_date
+        output_filename = forecast_filename(distributor, analysis_date, dest)
         if not base_dir_created:
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
             base_dir_created = True
-        logging.info(
-            f"Saving {distributor} forecasts for {forecast_data.analysis_date.isoformat()}"
-        )
-        with open(
-            output_filename,
-            "w",
-        ) as f:
-            f.write(forecast_data.forecast)
+        logging.info(f"Saving forecasts for {analysis_date}")
+        with open(output_filename, "w") as f:
+            # Some extra formatting is necessary to serialize the list of json dumped models as json
+            f.write(
+                f"[{','.join([row.model_dump_json() for row in transformed_data])}]"
+            )
 
 
 def main():
@@ -91,7 +89,7 @@ def main():
         dest="distributors",
         action="store",
         required=True,
-        help=f"Comma separated list of forecast distributors to download from (ie CAIC,FAC).\n\tOptions: "
+        help=f"Comma separated list of forecast distributors to transform data for (ie CAIC,FAC).\n\tOptions: "
         f"{distributors_str}",
     )
     parser.add_argument(
@@ -111,18 +109,26 @@ def main():
         help="End analysis date inclusive, format: YYYY-MM-DD",
     )
     parser.add_argument(
+        "--src",
+        dest="src",
+        action="store",
+        required=True,
+        help="Input directory to read the raw files to be transformed",
+    )
+    parser.add_argument(
         "--dest",
         dest="dest",
         action="store",
         required=True,
-        help="Output directory to place the downloaded files",
+        help="Output directory to place the transformed files",
     )
     args = parser.parse_args()
-    extract(
+    transform(
         ApiQueryParams(
             distributors=args.distributors.split(","),
             start_date=datetime.strptime(args.start_date, "%Y-%m-%d").date(),
             end_date=datetime.strptime(args.end_date, "%Y-%m-%d").date(),
+            src=args.src,
             dest=args.dest,
         )
     )
