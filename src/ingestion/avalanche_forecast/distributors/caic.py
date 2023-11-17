@@ -19,6 +19,7 @@ from src.ingestion.avalanche_forecast.common import (
 
 
 def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
+    """Extract the data from the CAIC website by making GET requests."""
     current_date = start_date
     while current_date <= end_date:
         response = requests.get(_get_url(current_date))
@@ -30,6 +31,13 @@ def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
 def transform(
     start_date: date, end_date: date, src: str
 ) -> Iterable[List[TransformedAvalancheForecast]]:
+    """Transform raw forecasts into a list of records, one for each forecasted region.
+
+    CAIC posts forecasts for all regions at their endpoint. This method flattens the JSON posted into a list of
+    records, one for each region. All missing fields are then filled with default -1 (no forecast) values and
+    the avalanche problems are pivoted such that a single forecast region record has all its problems associated
+    with it.
+    """
     current_date = start_date
     while current_date <= end_date:
         with open(
@@ -65,6 +73,7 @@ def transform(
 
 
 def _get_url(analysis_date: date) -> str:
+    """Get the CAIC download URL. It is assumed forecasts are posted once daily at the start of the date in UTC."""
     datetime_str = datetime.combine(analysis_date, time(), tzinfo=pytz.UTC).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
@@ -72,6 +81,7 @@ def _get_url(analysis_date: date) -> str:
 
 
 def _get_avalanche_problems(problems: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Helper method to flatten the raw forecast problems. Assumes at most 3 problems are ever posted."""
     transformed = {}
     for i, problem in enumerate(problems):
         if not problem:
@@ -93,6 +103,7 @@ def _get_avalanche_problems(problems: List[Dict[str, Any]]) -> Dict[str, Any]:
 def _get_avalanche_problem_aspect_elevations(
     problem_number: int, aspect_elevations: List[str]
 ) -> Dict[str, Any]:
+    """Helper method to flatten the elevations and aspects for a given problem number."""
     elevations = ("alp", "tln", "btl")
     aspects = ("n", "ne", "e", "se", "s", "sw", "w", "nw")
     transformed = {}

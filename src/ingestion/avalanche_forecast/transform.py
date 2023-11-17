@@ -1,5 +1,6 @@
+"""Transform raw avalanche forecasts from regional forecast distributors and save them."""
+
 import os
-import json
 import argparse
 import logging
 import traceback
@@ -30,6 +31,7 @@ class ApiQueryParams(BaseModel):
 
 @app.post("/transform")
 def transform(ApiQueryParams) -> None:
+    """Transform avalanche forecasts from a source directory over a date range and saves them."""
     exceptions = []
     for distributor in ApiQueryParams.distributors:
         logging.info(f"Processing distributor: {distributor}")
@@ -52,6 +54,7 @@ def transform(ApiQueryParams) -> None:
 def _get_transformer(
     distributor: ForecastDistributorEnum,
 ) -> Callable[[date, date, str], Iterable[List[TransformedAvalancheForecast]]]:
+    """Factory to get an transformation method corresponding to the provided distributor."""
     if distributor == ForecastDistributorEnum.CAIC:
         return caic.transform
     raise KeyError(f"Unknown distributor: {distributor}")
@@ -62,6 +65,7 @@ def _save(
     transformed: Iterable[List[TransformedAvalancheForecast]],
     dest: str,
 ) -> None:
+    """Save transformed data to the destination directory. Data are saved to <dest>/<distributor>/<date>.json."""
     base_dir_created = False
     for transformed_data in transformed:
         if not transformed_data:

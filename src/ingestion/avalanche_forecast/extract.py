@@ -30,7 +30,7 @@ class ApiQueryParams(BaseModel):
 
 @app.post("/extract")
 def extract(ApiQueryParams) -> None:
-    """Extracts avalanche forecasts from the provided distributors over a date range and saves them."""
+    """Extract avalanche forecasts from the provided distributors over a date range and saves them."""
     exceptions = []
     for distributor in ApiQueryParams.distributors:
         try:
