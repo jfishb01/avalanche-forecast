@@ -220,7 +220,8 @@ def test_transform(
             transformed = TransformedAvalancheForecast(
                 distributor=ForecastDistributorEnum.CAIC,
                 analysis_date=current_date,
-                forecast_date=current_date + timedelta(days=1),
+                forecast_date=current_date,
+                avalanche_season="1999/2000",
                 area_name=f"title_{id}",
                 area_id=f"area_{id}",
                 polygons=f"polygon0_{id},polygon1_{id}",
