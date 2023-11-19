@@ -51,6 +51,7 @@ class TransformedAvalancheForecast(BaseModel):
     distributor: ForecastDistributorEnum
     analysis_date: date
     forecast_date: date
+    avalanche_season: str
     area_name: str
     area_id: str
     polygons: str
