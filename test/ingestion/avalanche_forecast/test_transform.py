@@ -39,7 +39,8 @@ def mock_caic_transformer():
                     TransformedAvalancheForecast(
                         distributor="CAIC",
                         analysis_date=current_date,
-                        forecast_date=current_date + timedelta(days=1),
+                        forecast_date=current_date,
+                        avalanche_season="2000/2001",
                         area_name="dummy",
                         area_id="dummy",
                         polygons="abc,123",
@@ -60,14 +61,14 @@ def mock_caic_transformer():
     "desc,distributors,start_date,end_date,num_regions_in_raw_file",
     [
         (
-            "Transformed files saved for distributors over date date range for raw file with single region",
+            "Transformed files saved for distributors over date range for raw file with single region",
             ["CAIC"],
             date(2000, 1, 1),
             date(2000, 1, 3),
             1,
         ),
         (
-            "Transformed files saved for distributors over date date range for raw file with multiple regions",
+            "Transformed files saved for distributors over date range for raw file with multiple regions",
             ["CAIC"],
             date(2000, 1, 1),
             date(2000, 1, 3),

@@ -7,6 +7,7 @@ import requests
 from typing import Iterable, List, Dict, Any
 from datetime import date, datetime, timedelta, time
 
+from src.utils.datetime_helpers import date_to_avalanche_season
 from src.ingestion.avalanche_forecast.common import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
@@ -57,7 +58,8 @@ def transform(
                 TransformedAvalancheForecast(
                     distributor=ForecastDistributorEnum.CAIC,
                     analysis_date=current_date,
-                    forecast_date=current_date + timedelta(days=1),
+                    forecast_date=current_date,
+                    avalanche_season=date_to_avalanche_season(current_date),
                     area_name=region["title"],
                     area_id=region["areaId"],
                     polygons=",".join(region["polygons"]),
