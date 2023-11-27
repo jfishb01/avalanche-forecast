@@ -1,13 +1,12 @@
 """Extract and transform avalanche forecasts from the Colorado Avalanche Information Center."""
 
-import os
 import pytz
 import json
 import requests
 from typing import Iterable, List, Dict, Any
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, time
 
-from src.utils.datetime_helpers import date_to_avalanche_season
+from src.utils.datetime_helpers import date_to_avalanche_season, date_range
 from src.ingestion.avalanche_forecast.common import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
@@ -15,23 +14,19 @@ from src.ingestion.avalanche_forecast.common import (
     AvalancheRiskEnum,
     AvalancheLikelihoodEnum,
     AvalancheProblemEnum,
-    forecast_filename,
+    analysis_date_from_forecast_filename,
 )
 
 
 def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
     """Extract the data from the CAIC website by making GET requests."""
-    current_date = start_date
-    while current_date <= end_date:
-        response = requests.get(_get_url(current_date))
+    for analysis_date in date_range(start_date, end_date):
+        response = requests.get(_get_url(analysis_date))
         response.raise_for_status()
-        yield RawAvalancheForecast(analysis_date=current_date, forecast=response.text)
-        current_date += timedelta(days=1)
+        yield RawAvalancheForecast(analysis_date=analysis_date, forecast=response.text)
 
 
-def transform(
-    start_date: date, end_date: date, src: str
-) -> Iterable[List[TransformedAvalancheForecast]]:
+def transform(filenames: Iterable[str]) -> Iterable[List[TransformedAvalancheForecast]]:
     """Transform raw forecasts into a list of records, one for each forecasted region.
 
     CAIC posts forecasts for all regions at their endpoint. This method flattens the JSON posted into a list of
@@ -39,13 +34,12 @@ def transform(
     the avalanche problems are pivoted such that a single forecast region record has all its problems associated
     with it.
     """
-    current_date = start_date
-    while current_date <= end_date:
-        with open(
-            forecast_filename(ForecastDistributorEnum.CAIC, current_date, src), "r"
-        ) as f:
+    for filename in filenames:
+        with open(filename, "r") as f:
             raw = json.loads(f.read())
+
         transformed = []
+        analysis_date = analysis_date_from_forecast_filename(filename)
         for region in raw:
             if region["type"].upper() != "AVALANCHEFORECAST":
                 continue
@@ -57,9 +51,9 @@ def transform(
             transformed.append(
                 TransformedAvalancheForecast(
                     distributor=ForecastDistributorEnum.CAIC,
-                    analysis_date=current_date,
-                    forecast_date=current_date,
-                    avalanche_season=date_to_avalanche_season(current_date),
+                    analysis_date=analysis_date,
+                    forecast_date=analysis_date,
+                    avalanche_season=date_to_avalanche_season(analysis_date),
                     area_name=region["title"],
                     area_id=region["areaId"],
                     polygons=",".join(region["polygons"]),
@@ -71,7 +65,6 @@ def transform(
                 )
             )
         yield transformed
-        current_date += timedelta(days=1)
 
 
 def _get_url(analysis_date: date) -> str:

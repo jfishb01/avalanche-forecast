@@ -9,6 +9,7 @@ from typing import Iterable
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast import extract
 from src.ingestion.avalanche_forecast.common import (
     RawAvalancheForecast,
@@ -27,12 +28,11 @@ def dest():
 @pytest.fixture
 def mock_caic_extractor():
     def extractor(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
-        current_date = start_date
-        while current_date <= end_date:
+        for analysis_date in date_range(start_date, end_date):
             yield RawAvalancheForecast(
-                analysis_date=current_date, forecast=current_date.isoformat()
+                analysis_date=analysis_date, forecast=analysis_date.isoformat()
             )
-            current_date += timedelta(days=1)
+            analysis_date += timedelta(days=1)
 
     with patch(
         "src.ingestion.avalanche_forecast.distributors.caic.extract",
@@ -41,18 +41,10 @@ def mock_caic_extractor():
         yield m
 
 
-@pytest.mark.parametrize(
-    "desc,distributors,start_date,end_date",
-    [
-        (
-            "Forecast files saved for distributors over date date range",
-            ["CAIC"],
-            date(2000, 1, 1),
-            date(2000, 1, 3),
-        ),
-    ],
-)
-def test_extract(dest, mock_caic_extractor, desc, distributors, start_date, end_date):
+def test_extract(dest, mock_caic_extractor):
+    distributors = ["CAIC"]
+    start_date = date(2000, 1, 1)
+    end_date = date(2000, 1, 3)
     extract.extract(
         extract.ApiQueryParams(
             distributors=distributors,
@@ -62,12 +54,10 @@ def test_extract(dest, mock_caic_extractor, desc, distributors, start_date, end_
         )
     )
     for distributor in distributors:
-        current_date = start_date
-        while current_date <= end_date:
-            with open(forecast_filename(distributor, current_date, dest), "r") as f:
+        for analysis_date in date_range(start_date, end_date):
+            with open(forecast_filename(distributor, analysis_date, dest), "r") as f:
                 contents = f.read()
-                assert contents == current_date.isoformat()
-            current_date += timedelta(days=1)
+                assert contents == analysis_date.isoformat()
 
 
 @pytest.mark.parametrize(
@@ -101,18 +91,7 @@ def test_extract__empty_output(
     assert len(glob.glob(f"{dest}/*")) == 0
 
 
-@pytest.mark.parametrize(
-    "desc,distributors,start_date,end_date",
-    [
-        (
-            "Error during extraction raises HttpException",
-            ["CAIC"],
-            date(2000, 1, 1),
-            date(2000, 1, 3),
-        ),
-    ],
-)
-def test_extract__http_exception_raised(dest, desc, distributors, start_date, end_date):
+def test_extract__extraction_error_raises_http_exception(dest):
     def fail_extraction():
         raise RuntimeError
 
@@ -123,34 +102,21 @@ def test_extract__http_exception_raised(dest, desc, distributors, start_date, en
         with pytest.raises(HTTPException):
             extract.extract(
                 extract.ApiQueryParams(
-                    distributors=distributors,
-                    start_date=start_date,
-                    end_date=end_date,
+                    distributors=["CAIC"],
+                    start_date=date(2000, 1, 1),
+                    end_date=date(2000, 1, 3),
                     dest=dest,
                 )
             )
 
 
-@pytest.mark.parametrize(
-    "desc,distributors,start_date,end_date",
-    [
-        (
-            "Invalid distributor raises ValidationError",
-            ["invalid"],
-            date(2000, 1, 1),
-            date(2000, 1, 3),
-        ),
-    ],
-)
-def test_extract__invalid_distributor_raises_exception(
-    dest, desc, distributors, start_date, end_date
-):
+def test_extract__invalid_distributor_raises_exception(dest):
     with pytest.raises(ValidationError):
         extract.extract(
             extract.ApiQueryParams(
-                distributors=distributors,
-                start_date=start_date,
-                end_date=end_date,
+                distributors=["invalid"],
+                start_date=date(2000, 1, 1),
+                end_date=date(2000, 1, 3),
                 dest=dest,
             )
         )
