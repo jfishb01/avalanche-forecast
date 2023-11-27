@@ -3,11 +3,12 @@ import json
 import uuid
 import pytest
 import shutil
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import patch
 from requests import HTTPError
 from typing import Iterable, List, Dict, Any
 
+from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast.distributors.caic import extract, transform
 from src.ingestion.avalanche_forecast.common import (
     forecast_filename,
@@ -50,18 +51,18 @@ def get_sample_raw_data(region_ids: Iterable[str]) -> List[Dict[str, Any]]:
     return raw_data
 
 
-def save_sample_raw_data(
+def generate_sample_raw_files(
     raw_data: List[Dict[str, Any]], dir: str, start_date: date, end_date: date
-) -> None:
-    current_date = start_date
-    while current_date <= end_date:
-        raw_data_filename = forecast_filename(
-            ForecastDistributorEnum.CAIC, current_date, dir
-        )
-        os.makedirs(os.path.dirname(raw_data_filename), exist_ok=True)
-        with open(raw_data_filename, "w") as f:
+) -> Iterable[str]:
+    raw_data_filenames = [
+        forecast_filename(ForecastDistributorEnum.CAIC, d, dir)
+        for d in date_range(start_date, end_date)
+    ]
+    for filename in raw_data_filenames:
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "w") as f:
             f.write(json.dumps(raw_data))
-        current_date += timedelta(days=1)
+    return raw_data_filenames
 
 
 @pytest.fixture
@@ -102,12 +103,10 @@ def mock_response():
 )
 def test_extract(mock_response, desc, start_date, end_date):
     expected = []
-    current_date = start_date
-    while current_date <= end_date:
+    for analysis_date in date_range(start_date, end_date):
         expected.append(
-            RawAvalancheForecast(analysis_date=current_date, forecast="Lorem Ipsum")
+            RawAvalancheForecast(analysis_date=analysis_date, forecast="Lorem Ipsum")
         )
-        current_date += timedelta(days=1)
     with patch(
         "src.ingestion.avalanche_forecast.distributors.caic._get_url",
         return_value="https://example.com",
@@ -116,19 +115,13 @@ def test_extract(mock_response, desc, start_date, end_date):
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "desc,start_date,end_date",
-    [
-        ("Bad request raises HTTPError", date(2000, 1, 1), date(2000, 1, 3)),
-    ],
-)
-def test_extract__bad_request_raises_error(mock_response, desc, start_date, end_date):
+def test_extract__bad_request_raises_error(mock_response):
     with patch(
         "src.ingestion.avalanche_forecast.distributors.caic._get_url",
         return_value="invalid",
     ):
         with pytest.raises(HTTPError):
-            list(extract(start_date, end_date))
+            list(extract(date(2000, 1, 1), date(2000, 1, 3)))
 
 
 @pytest.mark.parametrize(
@@ -210,17 +203,16 @@ def test_transform(
     raw_data = get_sample_raw_data(region_ids)
     for entry in raw_data:
         entry |= raw_data_fields_to_update
-    save_sample_raw_data(raw_data, src, start_date, end_date)
+    raw_filenames = generate_sample_raw_files(raw_data, src, start_date, end_date)
 
-    current_date = start_date
     expected = []
-    while current_date <= end_date:
+    for analysis_date in date_range(start_date, end_date):
         expected_on_date = []
         for id in region_ids:
             transformed = TransformedAvalancheForecast(
                 distributor=ForecastDistributorEnum.CAIC,
-                analysis_date=current_date,
-                forecast_date=current_date,
+                analysis_date=analysis_date,
+                forecast_date=analysis_date,
                 avalanche_season="1999/2000",
                 area_name=f"title_{id}",
                 area_id=f"area_{id}",
@@ -239,37 +231,21 @@ def test_transform(
                 setattr(transformed, k, v)
             expected_on_date.append(transformed)
         expected.append(expected_on_date)
-        current_date += timedelta(days=1)
 
-    actual = list(transform(start_date, end_date, src))
+    actual = list(transform(raw_filenames))
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "desc,start_date,end_date,raw_data_fields_to_update",
-    [
-        (
-            "Region is skipped if type is not avalancheforecast",
-            date(2000, 1, 1),
-            date(2000, 1, 1),
-            {"type": "other"},
-        ),
-    ],
-)
-def test_transform__invalid_regions_skipped(
-    src,
-    desc,
-    start_date,
-    end_date,
-    raw_data_fields_to_update,
-):
+def test_transform__invalid_regions_skipped(src):
     raw_data = get_sample_raw_data(["0"])
     for entry in raw_data:
-        entry |= raw_data_fields_to_update
-    save_sample_raw_data(raw_data, src, start_date, end_date)
+        entry |= {"type": "other"}
+    raw_filenames = generate_sample_raw_files(
+        raw_data, src, date(2000, 1, 1), date(2000, 1, 1)
+    )
 
     expected = [[]]
-    actual = list(transform(start_date, end_date, src))
+    actual = list(transform(raw_filenames))
     assert actual == expected
 
 
@@ -313,22 +289,9 @@ def test_transform__malformed_raw_data_raises_exception(
         entry |= raw_data_fields_to_update
         entry = {k: v for k, v in entry.items() if k not in raw_data_fields_to_remove}
         updated_raw_data.append(entry)
-    save_sample_raw_data(updated_raw_data, src, start_date, end_date)
+    raw_filenames = generate_sample_raw_files(
+        updated_raw_data, src, start_date, end_date
+    )
 
     with pytest.raises(expection_type):
-        list(transform(start_date, end_date, src))
-
-
-@pytest.mark.parametrize(
-    "desc,start_date,end_date",
-    [
-        (
-            "Missing file raises exception",
-            date(2000, 1, 1),
-            date(2000, 1, 1),
-        ),
-    ],
-)
-def test_transform__missing_raw_data_raises_exception(src, desc, start_date, end_date):
-    with pytest.raises(FileNotFoundError):
-        list(transform(start_date, end_date, src))
+        list(transform(raw_filenames))

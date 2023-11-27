@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException
 from typing import Iterable, List, Callable
 
 from src.utils.loggers import set_console_logger
-from src.ingestion.avalanche_forecast.distributors import caic
+from src.ingestion.avalanche_forecast.distributors import caic, nwac
 from src.ingestion.avalanche_forecast.common import (
     ForecastDistributorEnum,
     TransformedAvalancheForecast,
@@ -36,27 +36,46 @@ def transform(ApiQueryParams) -> None:
     for distributor in ApiQueryParams.distributors:
         logging.info(f"Processing distributor: {distributor}")
         try:
-            transformed_forecasts = _get_transformer(distributor)(
-                ApiQueryParams.start_date, ApiQueryParams.end_date, ApiQueryParams.src
+            to_transform = _get_files_to_transform(
+                distributor,
+                ApiQueryParams.start_date,
+                ApiQueryParams.end_date,
+                ApiQueryParams.src,
             )
+            transformed_forecasts = _get_transformer(distributor)(to_transform)
             _save(distributor, transformed_forecasts, ApiQueryParams.dest)
         except:
-            exceptions.append(str({distributor: traceback.format_exc()}))
+            exceptions.append(f"{distributor.name}: {traceback.format_exc()}")
     if exceptions:
         exceptions_str = "\n".join(exceptions)
-        logging.error(exceptions)
+        logging.error(exceptions_str)
         raise HTTPException(
             status_code=500,
             detail=f"Transformation failed with the following exceptions:\n\n{exceptions_str}",
         )
 
 
+def _get_files_to_transform(
+    distributor: ForecastDistributorEnum, start_date: date, end_date: date, src: str
+) -> Iterable[str]:
+    input_dir, start_file = os.path.split(
+        forecast_filename(distributor, start_date, src)
+    )
+    end_file = os.path.basename(forecast_filename(distributor, end_date, src))
+    all_raw_files = os.listdir(input_dir)
+    return [
+        os.path.join(input_dir, f) for f in all_raw_files if start_file <= f <= end_file
+    ]
+
+
 def _get_transformer(
     distributor: ForecastDistributorEnum,
-) -> Callable[[date, date, str], Iterable[List[TransformedAvalancheForecast]]]:
-    """Factory to get an transformation method corresponding to the provided distributor."""
+) -> Callable[[Iterable[str]], Iterable[List[TransformedAvalancheForecast]]]:
+    """Factory to get a transformation method corresponding to the provided distributor."""
     if distributor == ForecastDistributorEnum.CAIC:
         return caic.transform
+    if distributor == ForecastDistributorEnum.NWAC:
+        return nwac.transform
     raise KeyError(f"Unknown distributor: {distributor}")
 
 
@@ -93,7 +112,7 @@ def main():
         dest="distributors",
         action="store",
         required=True,
-        help=f"Comma separated list of forecast distributors to transform data for (ie CAIC,FAC).\n\tOptions: "
+        help=f"Comma separated list of forecast distributors to transform data for (ie CAIC,NWAC).\n\tOptions: "
         f"{distributors_str}",
     )
     parser.add_argument(

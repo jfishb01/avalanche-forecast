@@ -10,7 +10,7 @@ from typing import Iterable, Callable
 from fastapi import FastAPI, HTTPException
 
 from src.utils.loggers import set_console_logger
-from src.ingestion.avalanche_forecast.distributors import caic
+from src.ingestion.avalanche_forecast.distributors import caic, nwac
 from src.ingestion.avalanche_forecast.common import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
@@ -39,7 +39,7 @@ def extract(ApiQueryParams) -> None:
             )
             _save(distributor, forecasts, ApiQueryParams.dest)
         except:
-            exceptions.append(str({distributor.name: traceback.format_exc()}))
+            exceptions.append(f"{distributor.name}: {traceback.format_exc()}")
     if exceptions:
         exceptions_str = "\n".join(exceptions)
         logging.error(exceptions_str)
@@ -55,6 +55,8 @@ def _get_extractor(
     """Factory to get an extraction method corresponding to the provided distributor."""
     if distributor == ForecastDistributorEnum.CAIC:
         return caic.extract
+    if distributor == ForecastDistributorEnum.NWAC:
+        return nwac.extract
     raise KeyError(f"Unknown distributor: {distributor}")
 
 
@@ -91,7 +93,7 @@ def main():
         dest="distributors",
         action="store",
         required=True,
-        help=f"Comma separated list of forecast distributors to download from (ie CAIC,FAC).\n\tOptions: "
+        help=f"Comma separated list of forecast distributors to download from (ie CAIC,NWAC).\n\tOptions: "
         f"{distributors_str}",
     )
     parser.add_argument(
