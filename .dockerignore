@@ -87,3 +87,6 @@ venv/
 
 # VS Code
 .vscode/
+
+# Program Logs
+logs/

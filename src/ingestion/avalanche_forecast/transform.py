@@ -98,9 +98,7 @@ def _save(
         logging.info(f"Saving forecasts for {analysis_date}")
         with open(output_filename, "w") as f:
             # Some extra formatting is necessary to serialize the list of json dumped models as json
-            f.write(
-                f"[{','.join([row.model_dump_json() for row in transformed_data])}]"
-            )
+            f.write("\n".join([row.model_dump_json() for row in transformed_data]))
 
 
 def main():
