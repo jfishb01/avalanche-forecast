@@ -88,5 +88,5 @@ venv/
 # VS Code
 .vscode/
 
-# Program Logs
-logs/
+# External resource configuration files
+resources/

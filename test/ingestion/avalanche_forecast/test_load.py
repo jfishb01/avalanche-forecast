@@ -29,10 +29,6 @@ def mock_insert_file():
         yield m
 
 
-# relative path raises HttpException
-# failed load raises HttpException
-
-
 @pytest.mark.parametrize(
     "desc,start_date,end_date",
     [
