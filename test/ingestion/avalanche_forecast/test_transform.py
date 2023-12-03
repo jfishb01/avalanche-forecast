@@ -124,7 +124,7 @@ def test_transform(
     for distributor in distributors:
         for analysis_date in date_range(start_date, end_date):
             with open(forecast_filename(distributor, analysis_date, dest), "r") as f:
-                contents = json.loads(f.read())
+                contents = [json.loads(line) for line in f.readlines()]
                 assert len(contents) == num_regions
 
 

@@ -5,6 +5,8 @@ ENV PYTHONPATH /
 WORKDIR /
 COPY ./requirements /requirements
 
+RUN apk add --no-cache curl build-base
+
 RUN pip install --no-cache-dir --upgrade -r /requirements/pip_requirements.txt
 
 COPY . /
