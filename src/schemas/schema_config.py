@@ -1,5 +1,6 @@
 """Base config classes for pandera to standardize configuration defaults."""
 
+
 class StrictDataFrameSchemaConfig(type):
     def __new__(cls, name, bases, dct):
         dct["strict"] = True
