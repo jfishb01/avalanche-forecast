@@ -1,5 +1,6 @@
-import os
-from datetime import date, datetime
+"""Dataclasses and schema definitions regional avalanche forecast datasets."""
+
+from datetime import date
 from enum import StrEnum, IntEnum
 from pydantic import BaseModel, computed_field
 
