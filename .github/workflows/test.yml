@@ -18,5 +18,4 @@ jobs:
       - name: Test with pytest
         run: |
           export PYTHONPATH=$(pwd)
-          pip install pytest pytest-cov
-          pytest . --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          python -m pytest --cov=. --cov-config=.coverage_rc --cov-report=term-missing

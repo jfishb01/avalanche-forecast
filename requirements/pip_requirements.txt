@@ -1,5 +1,6 @@
 black
 pytest
+pytest-cov
 pytz
 fastapi<1.0
 uvicorn[standard]<1.0
