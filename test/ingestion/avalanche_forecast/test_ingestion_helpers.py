@@ -10,7 +10,6 @@ from src.ingestion.avalanche_forecast.ingestion_helpers import (
 
 
 def test_forecast_filename():
-    # Validate that the filename contains the publish date or else this will break the ingestion pipeline
     actual = forecast_filename(
         ForecastDistributorEnum.CAIC, date(2000, 1, 1), "example"
     )
@@ -18,7 +17,6 @@ def test_forecast_filename():
 
 
 def test_publish_date_from_forecast_filename():
-    # Validate the publish date can be extracted from a correctly named forecast file
     actual = publish_date_from_forecast_filename("/path/to/file/2000-01-01.json")
     assert actual == date(2000, 1, 1)
 
