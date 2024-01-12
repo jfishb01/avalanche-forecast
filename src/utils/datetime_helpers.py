@@ -1,7 +1,5 @@
-import numpy as np
-import pandas as pd
-from datetime import date, datetime, timedelta
-from typing import Iterable, Tuple, Optional
+from datetime import date, timedelta
+from typing import Iterable, Tuple
 
 
 OFF_SEASON = "OFF_SEASON"
@@ -33,6 +31,7 @@ def date_to_avalanche_season(d: date, use_upcoming_when_unmapped: bool = False) 
 
 
 def date_in_avalanche_season(d: date) -> bool:
+    """Return whether the date is in the date bounds of any avalanche season."""
     return d >= date(d.year, SEASON_START_MONTH, SEASON_START_DAY) or d < date(
         d.year, SEASON_END_MONTH, SEASON_END_DAY
     )
@@ -53,6 +52,7 @@ def date_to_day_number_of_avalanche_season(d: date) -> int:
 
 
 def get_avalanche_season_date_bounds(avalanche_season: str) -> Tuple[date, date]:
+    """Get the date bounds of the provided avalanche season."""
     start_year, end_year = avalanche_season.split("/")
     return (
         date(int(start_year), SEASON_START_MONTH, SEASON_START_DAY),
@@ -63,7 +63,7 @@ def get_avalanche_season_date_bounds(avalanche_season: str) -> Tuple[date, date]
 def date_range(
     start_date: date, end_date: date, inclusive: bool = True
 ) -> Iterable[date]:
-    """Generates a list of dates in the range. The end date is included if inclusive=True."""
+    """Generate a list of dates in the range. The end date is included if inclusive=True."""
     current_date = start_date
     if not inclusive:
         end_date -= timedelta(days=1)
