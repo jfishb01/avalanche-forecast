@@ -3,21 +3,21 @@ import json
 import uuid
 import pytest
 import shutil
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 from requests import HTTPError
 from typing import Iterable, List, Dict, Any
 
 from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast.distributors.nwac import extract, transform
-from src.ingestion.avalanche_forecast.common import (
-    forecast_filename,
-    RawAvalancheForecast,
-    TransformedAvalancheForecast,
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import (
     ForecastDistributorEnum,
     AvalancheRiskEnum,
     AvalancheProblemEnum,
     AvalancheLikelihoodEnum,
+    RawAvalancheForecast,
+    AvalancheForecastFeatureSet,
 )
 
 
@@ -81,6 +81,15 @@ def src():
 
 
 @pytest.fixture
+def mock_date_to_day_number_of_avalanche_season():
+    with patch(
+        "src.ingestion.avalanche_forecast.distributors.nwac.date_to_day_number_of_avalanche_season",
+        return_value=1,
+    ) as m:
+        yield m
+
+
+@pytest.fixture
 def mock_response():
     class Response:
         def __init__(self, text: str = "", raise_exception=False):
@@ -141,15 +150,15 @@ def mock_response():
 )
 def test_extract(mock_response, desc, start_date, end_date, document_index):
     expected = []
-    for analysis_date in date_range(start_date, end_date):
+    for publish_date in date_range(start_date, end_date):
         region_forecasts = [
             d["id"]
             for d in document_index
-            if d["start_date"] == analysis_date.isoformat()
+            if d["start_date"] == publish_date.isoformat()
         ]
         expected.append(
             RawAvalancheForecast(
-                analysis_date=analysis_date, forecast=json.dumps(region_forecasts)
+                publish_date=publish_date, forecast=json.dumps(region_forecasts)
             )
         )
     with patch(
@@ -245,14 +254,44 @@ def test_extract__no_region_on_date_raises_error(mock_response):
             {
                 "problem_0": AvalancheProblemEnum.NOFORECAST,
                 "likelihood_0": AvalancheLikelihoodEnum.NOFORECAST,
-                "min_size_0": -1.0,
-                "max_size_0": -1.0,
+                "min_size_0": 0.0,
+                "max_size_0": 0.0,
                 "n_alp_0": False,
+            },
+        ),
+        (
+            "Empty problems are skipped",
+            date(2000, 1, 1),
+            date(2000, 1, 1),
+            ["0"],
+            {
+                "forecast_avalanche_problems": [
+                    {},
+                    {
+                        "avalanche_problem_id": 1,
+                        "likelihood": "almost certain",
+                        "size": [1.5, 2.5],
+                        "location": ["north upper"],
+                    },
+                ],
+            },
+            {
+                "problem_0": AvalancheProblemEnum.NOFORECAST,
+                "likelihood_0": AvalancheLikelihoodEnum.NOFORECAST,
+                "min_size_0": 0.0,
+                "max_size_0": 0.0,
+                "n_alp_0": False,
+                "problem_1": AvalancheProblemEnum.LOOSEDRY,
+                "likelihood_1": AvalancheLikelihoodEnum.ALMOSTCERTAIN,
+                "min_size_1": 1.5,
+                "max_size_1": 2.5,
+                "n_alp_1": True,
             },
         ),
     ],
 )
 def test_transform(
+    mock_date_to_day_number_of_avalanche_season,
     src,
     desc,
     start_date,
@@ -267,13 +306,19 @@ def test_transform(
     raw_filenames = generate_sample_raw_files(raw_data, src, start_date, end_date)
 
     expected = []
-    for analysis_date in date_range(start_date, end_date):
+    for publish_date in date_range(start_date, end_date):
         expected_on_date = []
         for id in region_ids:
-            transformed = TransformedAvalancheForecast(
+            transformed = AvalancheForecastFeatureSet(
                 distributor=ForecastDistributorEnum.NWAC,
-                analysis_date=analysis_date,
-                forecast_date=analysis_date,
+                publish_date=publish_date,
+                observation_date=publish_date,
+                analysis_date=publish_date + timedelta(days=1),
+                forecast_date=publish_date + timedelta(days=1),
+                publish_day_number=1,
+                observation_day_number=1,
+                analysis_day_number=1,
+                forecast_day_number=1,
                 avalanche_season="1999/2000",
                 area_name=f"zone_name_{id}",
                 area_id=f"id_{id}",
@@ -283,7 +328,7 @@ def test_transform(
                 danger_tln=AvalancheRiskEnum.MODERATE,
                 danger_btl=AvalancheRiskEnum.CONSIDERABLE,
                 problem_0=AvalancheProblemEnum.LOOSEDRY,
-                likelihood_0=AvalancheLikelihoodEnum.CERTAIN,
+                likelihood_0=AvalancheLikelihoodEnum.ALMOSTCERTAIN,
                 min_size_0=1.5,
                 max_size_0=2.5,
                 n_alp_0=True,
@@ -382,22 +427,28 @@ def test_transform__malformed_raw_data_raises_exception(
         list(transform(raw_filenames))
 
 
-def test_transform__latest_published_region_used(src):
-    analysis_date = date(2000, 1, 1)
+def test_transform__latest_published_region_used(
+    mock_date_to_day_number_of_avalanche_season, src
+):
+    publish_date = date(2000, 1, 1)
     raw_data = get_sample_raw_data(["0", "1"], use_unique_zone_ids=False)
     raw_data[0]["forecast_zone"][0]["published_time"] = datetime(
         2000, 1, 1, 5
     ).isoformat()
-    raw_filenames = generate_sample_raw_files(
-        raw_data, src, analysis_date, analysis_date
-    )
+    raw_filenames = generate_sample_raw_files(raw_data, src, publish_date, publish_date)
 
     expected = [
         [
-            TransformedAvalancheForecast(
+            AvalancheForecastFeatureSet(
                 distributor=ForecastDistributorEnum.NWAC,
-                analysis_date=analysis_date,
-                forecast_date=analysis_date,
+                publish_date=publish_date,
+                observation_date=publish_date,
+                analysis_date=publish_date + timedelta(days=1),
+                forecast_date=publish_date + timedelta(days=1),
+                publish_day_number=1,
+                observation_day_number=1,
+                analysis_day_number=1,
+                forecast_day_number=1,
                 avalanche_season="1999/2000",
                 area_name=f"zone_name_1",
                 area_id=f"id_1",
@@ -407,7 +458,7 @@ def test_transform__latest_published_region_used(src):
                 danger_tln=AvalancheRiskEnum.MODERATE,
                 danger_btl=AvalancheRiskEnum.CONSIDERABLE,
                 problem_0=AvalancheProblemEnum.LOOSEDRY,
-                likelihood_0=AvalancheLikelihoodEnum.CERTAIN,
+                likelihood_0=AvalancheLikelihoodEnum.ALMOSTCERTAIN,
                 min_size_0=1.5,
                 max_size_0=2.5,
                 n_alp_0=True,

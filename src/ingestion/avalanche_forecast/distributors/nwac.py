@@ -5,14 +5,20 @@ import requests
 from typing import Iterable, List, Dict, Any
 from datetime import date, datetime, timedelta
 
-from src.utils.datetime_helpers import date_to_avalanche_season, date_range
-from src.ingestion.avalanche_forecast.common import (
+from src.utils.datetime_helpers import (
+    date_to_avalanche_season,
+    date_to_day_number_of_avalanche_season,
+    date_range,
+)
+from src.ingestion.avalanche_forecast.ingestion_helpers import (
+    publish_date_from_forecast_filename,
+)
+from src.schemas.feature_sets.avalanche_forecast import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
-    TransformedAvalancheForecast,
+    AvalancheForecastFeatureSet,
     AvalancheLikelihoodEnum,
     AvalancheRiskEnum,
-    analysis_date_from_forecast_filename,
 )
 
 
@@ -28,22 +34,22 @@ def extract(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
 
     # Forecast documents are posted for each region, so group the documents by date.
     for row in all_forecast_urls:
-        analysis_date = datetime.fromisoformat(row["start_date"]).date()
-        all_forecast_urls_by_date.setdefault(analysis_date, []).append(row)
+        publish_date = datetime.fromisoformat(row["start_date"]).date()
+        all_forecast_urls_by_date.setdefault(publish_date, []).append(row)
 
     # Return all forecast regions for a date as one record to maintain consistency with other avalanche centers.
-    for analysis_date in date_range(start_date, end_date):
+    for publish_date in date_range(start_date, end_date):
         forecasts_for_date = []
-        for forecast_region in all_forecast_urls_by_date[analysis_date]:
+        for forecast_region in all_forecast_urls_by_date[publish_date]:
             forecast_response = requests.get(_get_document_url(forecast_region["id"]))
             forecast_response.raise_for_status()
             forecasts_for_date.append(forecast_response.json())
         yield RawAvalancheForecast(
-            analysis_date=analysis_date, forecast=json.dumps(forecasts_for_date)
+            publish_date=publish_date, forecast=json.dumps(forecasts_for_date)
         )
 
 
-def transform(filenames: Iterable[str]) -> Iterable[List[TransformedAvalancheForecast]]:
+def transform(filenames: Iterable[str]) -> Iterable[List[AvalancheForecastFeatureSet]]:
     """Transform raw forecasts into a list of records, one for each forecasted region.
 
     This method flattens the raw JSON posted by NWAC into a list of records, one for each region. All missing
@@ -55,16 +61,33 @@ def transform(filenames: Iterable[str]) -> Iterable[List[TransformedAvalancheFor
             raw = _filter_raw(json.loads(f.read()))
 
         transformed = []
-        analysis_date = analysis_date_from_forecast_filename(filename)
+        publish_date = publish_date_from_forecast_filename(filename)
+        observation_date = publish_date
+        analysis_date = publish_date + timedelta(days=1)
+        forecast_date = publish_date + timedelta(days=1)
         for region in raw:
             dangers = [x for x in region["danger"] if x["valid_day"] == "current"][0]
             summary = region["bottom_line"] or "" + region["hazard_discussion"] or ""
             transformed.append(
-                TransformedAvalancheForecast(
+                AvalancheForecastFeatureSet(
                     distributor=ForecastDistributorEnum.NWAC,
+                    publish_date=publish_date,
+                    observation_date=observation_date,
+                    publish_day_number=date_to_day_number_of_avalanche_season(
+                        publish_date
+                    ),
+                    observation_day_number=date_to_day_number_of_avalanche_season(
+                        observation_date
+                    ),
                     analysis_date=analysis_date,
-                    forecast_date=analysis_date,
-                    avalanche_season=date_to_avalanche_season(analysis_date),
+                    forecast_date=forecast_date,
+                    analysis_day_number=date_to_day_number_of_avalanche_season(
+                        analysis_date
+                    ),
+                    forecast_day_number=date_to_day_number_of_avalanche_season(
+                        forecast_date
+                    ),
+                    avalanche_season=date_to_avalanche_season(publish_date),
                     area_name=region["forecast_zone"][0]["name"],
                     area_id=str(region["forecast_zone"][0]["id"]),
                     polygons=region["forecast_zone"][0]["zone_id"],
@@ -78,7 +101,7 @@ def transform(filenames: Iterable[str]) -> Iterable[List[TransformedAvalancheFor
         yield transformed
 
 
-def _get_index_url(start_date: date, end_date: date) -> str:
+def _get_index_url(start_date: date, end_date: date) -> str:  # pragma: no cover
     """Get the URL endpoint to index all forecast documents between the start and end dates."""
     base_url = "https://api.avalanche.org/v2/public/products?avalanche_center_id=NWAC"
     return f"{base_url}&date_start={start_date.isoformat()}&date_end={(end_date + timedelta(days=1)).isoformat()}"
@@ -120,11 +143,7 @@ def _get_avalanche_problems(problems: List[Dict[str, Any]]) -> Dict[str, Any]:
         transformed |= {
             f"problem_{i}": problem["avalanche_problem_id"],
             f"likelihood_{i}": AvalancheLikelihoodEnum[
-                problem["likelihood"]
-                .replace(" ", "")
-                .split("_")[0]
-                .upper()
-                .replace("ALMOSTCERTAIN", "CERTAIN")
+                problem["likelihood"].replace(" ", "").split("_")[0].upper()
             ],
             f"min_size_{i}": float(problem["size"][0]),
             f"max_size_{i}": float(problem["size"][1]),
@@ -151,7 +170,7 @@ def _get_avalanche_problem_aspect_elevations(
     transformed = {}
     for aspect_k, aspect_v in aspects.items():
         for elevation_k, elevation_v in elevations.items():
-            transformed[f"{aspect_k}_{elevation_k}_{problem_number}"] = (
+            transformed[f"{aspect_k}_{elevation_k}_{problem_number}"] = int(
                 f"{aspect_v} {elevation_v}" in aspect_elevations
             )
     return transformed

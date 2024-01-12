@@ -5,18 +5,20 @@ import glob
 import shutil
 import pytest
 from unittest.mock import patch
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterable, List, Callable
 from fastapi import HTTPException
 from pydantic import ValidationError
 
 from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast import transform
-from src.ingestion.avalanche_forecast.common import (
-    ForecastDistributorEnum,
-    TransformedAvalancheForecast,
+from src.ingestion.avalanche_forecast.ingestion_helpers import (
     forecast_filename,
-    analysis_date_from_forecast_filename,
+    publish_date_from_forecast_filename,
+)
+from src.schemas.feature_sets.avalanche_forecast import (
+    ForecastDistributorEnum,
+    AvalancheForecastFeatureSet,
 )
 
 
@@ -50,19 +52,25 @@ def mock_transform_fn(
     end_date: date,
     num_regions: int,
     create_raw_files: bool = True,
-) -> (Callable)[[List[str]], Iterable[List[TransformedAvalancheForecast]]]:
+) -> (Callable)[[List[str]], Iterable[List[AvalancheForecastFeatureSet]]]:
     def transformer(
         filenames: List[str],
-    ) -> Iterable[List[TransformedAvalancheForecast]]:
+    ) -> Iterable[List[AvalancheForecastFeatureSet]]:
         for filename in filenames:
             transformed = []
-            analysis_date = analysis_date_from_forecast_filename(filename)
+            publish_date = publish_date_from_forecast_filename(filename)
             for _ in range(num_regions):
                 transformed.append(
-                    TransformedAvalancheForecast(
+                    AvalancheForecastFeatureSet(
                         distributor="CAIC",
-                        analysis_date=analysis_date,
-                        forecast_date=analysis_date,
+                        publish_date=publish_date,
+                        observation_date=publish_date,
+                        analysis_date=publish_date + timedelta(days=1),
+                        forecast_date=publish_date + timedelta(days=1),
+                        publish_day_number=1,
+                        observation_day_number=1,
+                        analysis_day_number=1,
+                        forecast_day_number=1,
                         avalanche_season="2000/2001",
                         area_name="dummy",
                         area_id="dummy",
@@ -73,9 +81,9 @@ def mock_transform_fn(
             yield transformed
 
     if create_raw_files:
-        for analysis_date in date_range(start_date, end_date):
+        for publish_date in date_range(start_date, end_date):
             with open(
-                forecast_filename(ForecastDistributorEnum.CAIC, analysis_date, src), "w"
+                forecast_filename(ForecastDistributorEnum.CAIC, publish_date, src), "w"
             ):
                 pass
 
@@ -122,8 +130,8 @@ def test_transform(
         )
     )
     for distributor in distributors:
-        for analysis_date in date_range(start_date, end_date):
-            with open(forecast_filename(distributor, analysis_date, dest), "r") as f:
+        for publish_date in date_range(start_date, end_date):
+            with open(forecast_filename(distributor, publish_date, dest), "r") as f:
                 contents = [json.loads(line) for line in f.readlines()]
                 assert len(contents) == num_regions
 

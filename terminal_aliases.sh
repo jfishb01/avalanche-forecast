@@ -30,7 +30,7 @@ start_local() {
     -e PYTHONPATH=/sandbox:/ \
     -v $AVALANCHE_FORECAST_REPO:/sandbox \
     -w /sandbox \
-    --entrypoint sh \
+    --entrypoint /bin/bash \
     $WEBSERVER_IMAGE_NAME
 }
 

@@ -15,10 +15,8 @@ from pydantic import BaseModel
 
 from src.utils.datetime_helpers import date_range
 from src.utils.loggers import set_console_logger
-from src.ingestion.avalanche_forecast.common import (
-    ForecastDistributorEnum,
-    forecast_filename,
-)
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import ForecastDistributorEnum
 
 
 app = FastAPI()
@@ -50,15 +48,15 @@ def load(ApiQueryParams) -> None:
     table_exists = False
     exceptions = []
     for distributor in ApiQueryParams.distributors:
-        for analysis_date in date_range(
+        for publish_date in date_range(
             ApiQueryParams.start_date, ApiQueryParams.end_date
         ):
-            filename = forecast_filename(distributor, analysis_date, ApiQueryParams.src)
+            filename = forecast_filename(distributor, publish_date, ApiQueryParams.src)
             try:
                 assert os.path.isabs(filename), f"{filename} must be an absolute path."
                 table_exists = table_exists or _create_table(client, filename)
                 if ApiQueryParams.force_load or not _data_already_loaded(
-                    client, distributor, analysis_date
+                    client, distributor, publish_date
                 ):
                     logging.info(f"Loading {filename}")
                     insert_file(
@@ -87,19 +85,19 @@ def _create_table(client: HttpClient, filename: str) -> bool:
 
 
 def _data_already_loaded(
-    client: HttpClient, distributor: ForecastDistributorEnum, analysis_date: date
+    client: HttpClient, distributor: ForecastDistributorEnum, publish_date: date
 ) -> bool:
-    parameters = {"distributor": distributor, "analysis_date": analysis_date}
+    parameters = {"distributor": distributor, "publish_date": publish_date}
     return bool(
         client.command(
             f"SELECT COUNT(1) FROM {DB_TABLE} "
-            f"WHERE distributor = %(distributor)s AND analysis_date = %(analysis_date)s",
+            f"WHERE distributor = %(distributor)s AND publish_date = %(publish_date)s",
             parameters=parameters,
         )
     )
 
 
-def main():
+def main():  # pragma: no cover
     set_console_logger()
     distributors_str = "\n\t".join(list(ForecastDistributorEnum))
     parser = argparse.ArgumentParser()
@@ -117,7 +115,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="Start analysis date, format: YYYY-MM-DD",
+        help="Start publish date, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--end-date",
@@ -125,7 +123,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="End analysis date inclusive, format: YYYY-MM-DD",
+        help="End publish date inclusive, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--src",
@@ -161,5 +159,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

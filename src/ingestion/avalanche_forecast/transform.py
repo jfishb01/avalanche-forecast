@@ -11,10 +11,10 @@ from typing import Iterable, List, Callable
 
 from src.utils.loggers import set_console_logger
 from src.ingestion.avalanche_forecast.distributors import caic, nwac
-from src.ingestion.avalanche_forecast.common import (
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import (
     ForecastDistributorEnum,
-    TransformedAvalancheForecast,
-    forecast_filename,
+    AvalancheForecastFeatureSet,
 )
 
 
@@ -70,7 +70,9 @@ def _get_files_to_transform(
 
 def _get_transformer(
     distributor: ForecastDistributorEnum,
-) -> Callable[[Iterable[str]], Iterable[List[TransformedAvalancheForecast]]]:
+) -> Callable[
+    [Iterable[str]], Iterable[List[AvalancheForecastFeatureSet]]
+]:  # pragma: no cover
     """Factory to get a transformation method corresponding to the provided distributor."""
     if distributor == ForecastDistributorEnum.CAIC:
         return caic.transform
@@ -81,7 +83,7 @@ def _get_transformer(
 
 def _save(
     distributor: ForecastDistributorEnum,
-    transformed: Iterable[List[TransformedAvalancheForecast]],
+    transformed: Iterable[List[AvalancheForecastFeatureSet]],
     dest: str,
 ) -> None:
     """Save transformed data to the destination directory. Data are saved to <dest>/<distributor>/<date>.json."""
@@ -90,18 +92,18 @@ def _save(
         if not transformed_data:
             continue
 
-        analysis_date = transformed_data[0].analysis_date
-        output_filename = forecast_filename(distributor, analysis_date, dest)
+        publish_date = transformed_data[0].publish_date
+        output_filename = forecast_filename(distributor, publish_date, dest)
         if not base_dir_created:
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
             base_dir_created = True
-        logging.info(f"Saving forecasts for {analysis_date}")
+        logging.info(f"Saving forecasts for {publish_date}")
         with open(output_filename, "w") as f:
             # Some extra formatting is necessary to serialize the list of json dumped models as json
             f.write("\n".join([row.model_dump_json() for row in transformed_data]))
 
 
-def main():
+def main():  # pragma: no cover
     set_console_logger()
     distributors_str = "\n\t".join(list(ForecastDistributorEnum))
     parser = argparse.ArgumentParser()
@@ -119,7 +121,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="Start analysis date, format: YYYY-MM-DD",
+        help="Start publish date, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--end-date",
@@ -127,7 +129,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="End analysis date inclusive, format: YYYY-MM-DD",
+        help="End publish date inclusive, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--src",
@@ -155,5 +157,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

@@ -11,10 +11,10 @@ from fastapi import FastAPI, HTTPException
 
 from src.utils.loggers import set_console_logger
 from src.ingestion.avalanche_forecast.distributors import caic, nwac
-from src.ingestion.avalanche_forecast.common import (
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import (
     ForecastDistributorEnum,
     RawAvalancheForecast,
-    forecast_filename,
 )
 
 
@@ -51,7 +51,7 @@ def extract(ApiQueryParams) -> None:
 
 def _get_extractor(
     distributor: ForecastDistributorEnum,
-) -> Callable[[date, date], Iterable[RawAvalancheForecast]]:
+) -> Callable[[date, date], Iterable[RawAvalancheForecast]]:  # pragma: no cover
     """Factory to get an extraction method corresponding to the provided distributor."""
     if distributor == ForecastDistributorEnum.CAIC:
         return caic.extract
@@ -69,13 +69,13 @@ def _save(
     base_dir_created = False
     for forecast_data in forecasts:
         output_filename = forecast_filename(
-            distributor, forecast_data.analysis_date, dest
+            distributor, forecast_data.publish_date, dest
         )
         if not base_dir_created:
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
             base_dir_created = True
         logging.info(
-            f"Saving {distributor} forecasts for {forecast_data.analysis_date.isoformat()}"
+            f"Saving {distributor} forecasts for {forecast_data.publish_date.isoformat()}"
         )
         with open(
             output_filename,
@@ -84,7 +84,7 @@ def _save(
             f.write(forecast_data.forecast)
 
 
-def main():
+def main():  # pragma: no cover
     set_console_logger()
     distributors_str = "\n\t".join(list(ForecastDistributorEnum))
     parser = argparse.ArgumentParser()
@@ -102,7 +102,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="Start analysis date, format: YYYY-MM-DD",
+        help="Start publish date, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--end-date",
@@ -110,7 +110,7 @@ def main():
         action="store",
         required=False,
         default=date.today().strftime("%Y-%m-%d"),
-        help="End analysis date inclusive, format: YYYY-MM-DD",
+        help="End publish date inclusive, format: YYYY-MM-DD",
     )
     parser.add_argument(
         "--dest",
@@ -130,5 +130,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

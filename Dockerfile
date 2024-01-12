@@ -1,11 +1,9 @@
-FROM python:3.11-alpine
+FROM python:3.11
 ENV PYTHONUNBUFFERED True
 ENV PYTHONPATH /
 
 WORKDIR /
 COPY ./requirements /requirements
-
-RUN apk add --no-cache curl build-base
 
 RUN pip install --no-cache-dir --upgrade -r /requirements/pip_requirements.txt
 
