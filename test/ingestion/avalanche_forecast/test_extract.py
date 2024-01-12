@@ -11,10 +11,8 @@ from pydantic import ValidationError
 
 from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast import extract
-from src.ingestion.avalanche_forecast.common import (
-    RawAvalancheForecast,
-    forecast_filename,
-)
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import RawAvalancheForecast
 
 
 @pytest.fixture
@@ -28,11 +26,11 @@ def dest():
 @pytest.fixture
 def mock_caic_extractor():
     def extractor(start_date: date, end_date: date) -> Iterable[RawAvalancheForecast]:
-        for analysis_date in date_range(start_date, end_date):
+        for publish_date in date_range(start_date, end_date):
             yield RawAvalancheForecast(
-                analysis_date=analysis_date, forecast=analysis_date.isoformat()
+                publish_date=publish_date, forecast=publish_date.isoformat()
             )
-            analysis_date += timedelta(days=1)
+            publish_date += timedelta(days=1)
 
     with patch(
         "src.ingestion.avalanche_forecast.distributors.caic.extract",
@@ -54,10 +52,10 @@ def test_extract(dest, mock_caic_extractor):
         )
     )
     for distributor in distributors:
-        for analysis_date in date_range(start_date, end_date):
-            with open(forecast_filename(distributor, analysis_date, dest), "r") as f:
+        for publish_date in date_range(start_date, end_date):
+            with open(forecast_filename(distributor, publish_date, dest), "r") as f:
                 contents = f.read()
-                assert contents == analysis_date.isoformat()
+                assert contents == publish_date.isoformat()
 
 
 @pytest.mark.parametrize(

@@ -3,21 +3,21 @@ import json
 import uuid
 import pytest
 import shutil
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 from requests import HTTPError
 from typing import Iterable, List, Dict, Any
 
 from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast.distributors.caic import extract, transform
-from src.ingestion.avalanche_forecast.common import (
-    forecast_filename,
-    RawAvalancheForecast,
-    TransformedAvalancheForecast,
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import (
     ForecastDistributorEnum,
     AvalancheRiskEnum,
     AvalancheProblemEnum,
     AvalancheLikelihoodEnum,
+    RawAvalancheForecast,
+    AvalancheForecastFeatureSet,
 )
 
 
@@ -74,6 +74,15 @@ def src():
 
 
 @pytest.fixture
+def mock_date_to_day_number_of_avalanche_season():
+    with patch(
+        "src.ingestion.avalanche_forecast.distributors.caic.date_to_day_number_of_avalanche_season",
+        return_value=1,
+    ) as m:
+        yield m
+
+
+@pytest.fixture
 def mock_response():
     class Response:
         text = "Lorem Ipsum"
@@ -103,9 +112,9 @@ def mock_response():
 )
 def test_extract(mock_response, desc, start_date, end_date):
     expected = []
-    for analysis_date in date_range(start_date, end_date):
+    for publish_date in date_range(start_date, end_date):
         expected.append(
-            RawAvalancheForecast(analysis_date=analysis_date, forecast="Lorem Ipsum")
+            RawAvalancheForecast(publish_date=publish_date, forecast="Lorem Ipsum")
         )
     with patch(
         "src.ingestion.avalanche_forecast.distributors.caic._get_url",
@@ -184,14 +193,15 @@ def test_extract__bad_request_raises_error(mock_response):
             {
                 "problem_0": AvalancheProblemEnum.NOFORECAST,
                 "likelihood_0": AvalancheLikelihoodEnum.NOFORECAST,
-                "min_size_0": -1.0,
-                "max_size_0": -1.0,
+                "min_size_0": 0.0,
+                "max_size_0": 0.0,
                 "n_alp_0": False,
             },
         ),
     ],
 )
 def test_transform(
+    mock_date_to_day_number_of_avalanche_season,
     src,
     desc,
     start_date,
@@ -206,13 +216,19 @@ def test_transform(
     raw_filenames = generate_sample_raw_files(raw_data, src, start_date, end_date)
 
     expected = []
-    for analysis_date in date_range(start_date, end_date):
+    for publish_date in date_range(start_date, end_date):
         expected_on_date = []
         for id in region_ids:
-            transformed = TransformedAvalancheForecast(
+            transformed = AvalancheForecastFeatureSet(
                 distributor=ForecastDistributorEnum.CAIC,
-                analysis_date=analysis_date,
-                forecast_date=analysis_date,
+                publish_date=publish_date,
+                observation_date=publish_date,
+                analysis_date=publish_date + timedelta(days=1),
+                forecast_date=publish_date + timedelta(days=1),
+                publish_day_number=1,
+                observation_day_number=1,
+                analysis_day_number=1,
+                forecast_day_number=1,
                 avalanche_season="1999/2000",
                 area_name=f"title_{id}",
                 area_id=f"area_{id}",
@@ -265,8 +281,14 @@ def test_transform__invalid_regions_skipped(src):
             date(2000, 1, 1),
             date(2000, 1, 1),
             {
-                "dangerRatings": {
-                    "days": [{"alp": "invalid", "tln": "invalid", "btl": "invalid"}]
+                "avalancheProblems": {
+                    "days": [
+                        [
+                            {
+                                "type": "invalid",
+                            }
+                        ]
+                    ]
                 }
             },
             [],

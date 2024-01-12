@@ -5,10 +5,8 @@ from fastapi import HTTPException
 
 from src.utils.datetime_helpers import date_range
 from src.ingestion.avalanche_forecast import load
-from src.ingestion.avalanche_forecast.common import (
-    ForecastDistributorEnum,
-    forecast_filename,
-)
+from src.ingestion.avalanche_forecast.ingestion_helpers import forecast_filename
+from src.schemas.feature_sets.avalanche_forecast import ForecastDistributorEnum
 
 
 @pytest.fixture
@@ -61,8 +59,8 @@ def test_load__all_files_loaded(
 
     database, table = load.DB_TABLE.split(".")
     expected_calls = []
-    for analysis_date in date_range(start_date, end_date):
-        filename = forecast_filename(distributors[0], analysis_date, src)
+    for publish_date in date_range(start_date, end_date):
+        filename = forecast_filename(distributors[0], publish_date, src)
         expected_calls.append(
             call(mock_client(), table, filename, database=database, fmt="JSONEachRow")
         )
@@ -134,8 +132,8 @@ def test_load__create_table_called_multiple_times_during_failures(
 
 
 def test_load__only_new_files_inserted(mock_client, mock_insert_file):
-    def side_effect(client, distributor, analysis_date):
-        if analysis_date == date(2000, 1, 2):
+    def side_effect(client, distributor, publish_date):
+        if publish_date == date(2000, 1, 2):
             return False
         return True
 
@@ -165,8 +163,8 @@ def test_load__only_new_files_inserted(mock_client, mock_insert_file):
 
 
 def test_load__all_files_inserted_with_force_load(mock_client, mock_insert_file):
-    def side_effect(client, distributor, analysis_date):
-        if analysis_date == date(2000, 1, 2):
+    def side_effect(client, distributor, publish_date):
+        if publish_date == date(2000, 1, 2):
             return False
         return True
 
@@ -191,8 +189,8 @@ def test_load__all_files_inserted_with_force_load(mock_client, mock_insert_file)
         )
 
     expected_calls = []
-    for analysis_date in date_range(start_date, end_date):
-        filename = forecast_filename(ForecastDistributorEnum.CAIC, analysis_date, src)
+    for publish_date in date_range(start_date, end_date):
+        filename = forecast_filename(ForecastDistributorEnum.CAIC, publish_date, src)
         expected_calls.append(
             call(mock_client(), table, filename, database=database, fmt="JSONEachRow")
         )
