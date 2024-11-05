@@ -27,7 +27,7 @@ start_webserver() {
   # Example usage: start_webserver path.to.app:app_name 8181
   app=$1
   port=$2
-  docker run --rm -it -p ${port:-8080}:3000 $WEBSERVER_IMAGE_NAME $app
+  docker run --rm -it -p ${port:-8080}:8080 $WEBSERVER_IMAGE_NAME $app
 }
 
 start_local() {
