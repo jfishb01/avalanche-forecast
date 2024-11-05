@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  dagster-webserver:
+    ports:
+      - "11000:11000"
+    environment:
+      - DEFINITIONS=dev
+      - DAGSTER_HOME=/opt/dev/config/dev
+    volumes:
+      - ./:/opt/dev
+    working_dir: /opt/dev
+    command: dagster dev -h "0.0.0.0" -p 11000 --python-file "src/__init__.py"

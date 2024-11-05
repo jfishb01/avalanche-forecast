@@ -1,0 +1,33 @@
+telemetry:
+  enabled: false
+sensors:
+  use_threads: true
+  num_workers: 8
+schedules:
+  use_threads: true
+  num_workers: 8
+storage:
+  postgres:
+    postgres_db:
+      hostname: dagster-postgres
+      username: postgres
+      password:
+        env: POSTGRES_PASSWORD
+      db_name: postgres
+      port: 5432
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 8
+    dequeue_interval_seconds: 1
+    dequeue_use_threads: true
+    dequeue_num_workers: 8
+    user_code_failure_retry_delay: 30
+    tag_concurrency_limits:
+      - key: "no_concurrency"
+        value: "true"
+        limit: 1
+run_monitoring:
+  enabled: true
+  free_slots_after_run_end_seconds: 15 # free any hanging concurrency slots after 15 seconds from the end of a run

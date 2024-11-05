@@ -1,6 +1,11 @@
-# Terminal aliases to improve development iteration.
-#
-# See the "Getting Started" section of this repo's README to configure these aliases.
+# Project terminal aliases. See the root README for notes on configuring.
+
+set_env() {
+  # Options include "dev" or "prod"
+  env=$1
+  rm ./docker-compose.override.yaml
+  ln -s ./docker-compose.$env.yaml ./docker-compose.override.yaml
+}
 
 
 WEBSERVER_IMAGE_NAME="avalanche-forecast-webserver"
@@ -22,7 +27,7 @@ start_webserver() {
   # Example usage: start_webserver path.to.app:app_name 8181
   app=$1
   port=$2
-  docker run --rm -it -p ${port:-8080}:8080 $WEBSERVER_IMAGE_NAME $app
+  docker run --rm -it -p ${port:-8080}:3000 $WEBSERVER_IMAGE_NAME $app
 }
 
 start_local() {
