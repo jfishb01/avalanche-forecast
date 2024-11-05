@@ -24,12 +24,10 @@ def _get_evaluation_classifier_metrics(
             (evaluation_set["distributor"] == area.distributor)
             & (evaluation_set["area_id"] == area.area_id)
         ]
-        eval_metrics_by_area[
-            f"accuracy - {area.distributor}.{area.area_name}"
-        ] = metrics.accuracy_score(
-            evaluation_set_by_area["observed"], evaluation_set_by_area["predicted"]
-        ).round(
-            3
+        eval_metrics_by_area[f"accuracy - {area.distributor}.{area.area_name}"] = (
+            metrics.accuracy_score(
+                evaluation_set_by_area["observed"], evaluation_set_by_area["predicted"]
+            ).round(3)
         )
 
     eval_metrics_aggregate["accuracy"] = metrics.accuracy_score(
