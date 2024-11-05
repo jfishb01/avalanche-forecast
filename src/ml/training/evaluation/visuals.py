@@ -94,13 +94,15 @@ def save_evaluation_accuracy_plot(
                 error_points["predicted"].tolist(),
                 PREDICTED_MARKER,
             ),
-            ScatterPlotCategory(
-                correct_points["analysis_date"].tolist(),
-                correct_points["observed"].tolist(),
-                CORRECT_MARKER,
-            )
-            if show_correct_forecasts
-            else None,
+            (
+                ScatterPlotCategory(
+                    correct_points["analysis_date"].tolist(),
+                    correct_points["observed"].tolist(),
+                    CORRECT_MARKER,
+                )
+                if show_correct_forecasts
+                else None
+            ),
         ),
     )
 

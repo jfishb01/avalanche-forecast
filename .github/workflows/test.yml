@@ -18,4 +18,5 @@ jobs:
       - name: Test with pytest
         run: |
           export PYTHONPATH=$(pwd)
+          export DEFINITIONS=dev
           python -m pytest --cov=. --cov-config=.coverage_rc --cov-report=term-missing

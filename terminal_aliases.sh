@@ -1,6 +1,11 @@
-# Terminal aliases to improve development iteration.
-#
-# See the "Getting Started" section of this repo's README to configure these aliases.
+# Project terminal aliases. See the root README for notes on configuring.
+
+set_env() {
+  # Options include "dev" or "prod"
+  env=$1
+  rm ./docker-compose.override.yaml
+  ln -s ./docker-compose.$env.yaml ./docker-compose.override.yaml
+}
 
 
 WEBSERVER_IMAGE_NAME="avalanche-forecast-webserver"

@@ -1,0 +1,29 @@
+version: '3.7'
+services:
+  dagster-webserver:
+    ports:
+      - "12000:12000"
+    depends_on:
+      dagster-postgres:
+        condition: service_healthy
+    environment:
+      - POSTGRES_PASSWORD=dagster_postgres_pwd
+      - DEFINITIONS=prod
+
+  dagster-postgres:
+    image: "postgres:latest"
+    user: postgres
+    restart: always
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: dagster_postgres_pwd
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-p", "5432" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./dagster/prod/postgresql/data:/var/lib/postgresql/data

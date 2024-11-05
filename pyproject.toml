@@ -1,0 +1,21 @@
+[project]
+name = "avalanche-forecast"
+version = "0.0.1"
+description = "Forecast regional avalanche risks and problem types using ML"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+authors = [
+  {name = "Josh Fishbein", email = "joshua.p.fishbein@gmail.com"},
+]
+
+[project.urls]
+Homepage = "https://github.com/jfishb01/avalanche-forecast"
+Tracker = "https://github.com/jfishb01/avalanche-forecast/issues"
+
+[tool.dagster]
+module_name = "src"

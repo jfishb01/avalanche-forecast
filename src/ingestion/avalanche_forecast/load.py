@@ -1,6 +1,5 @@
 """Load transformed avalanche forecast data from regional forecast distributors to a DB."""
 
-
 import os
 import logging
 import argparse
