@@ -38,9 +38,7 @@ class FileIOManager(ConfigurableIOManager):
             + f"{self._extension()}"
         )
 
-    def handle_output(
-        self, context: OutputContext, obj: object
-    ) -> None:
+    def handle_output(self, context: OutputContext, obj: object) -> None:
         """Required method for writing Dagster materialization outputs.
 
         Uses the _dump_fn to serialize the materialized asset result and writes the outputs to a file located at
