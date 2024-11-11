@@ -8,7 +8,7 @@ from dagster import ConfigurableResource
 class CAICResource(ConfigurableResource):
     """Resource for extracting avalanche forecasts from  the Colorado Avalanche Information Center."""
 
-    def extract(self, forecast_date: date) -> Dict[str, Any]:  # pragma: no cover
+    def extract(self, forecast_date: date) -> Dict[str, Any]:
         """Extract a json forecast from the CAIC site for the provided forecast_date."""
         forecast_datetime_str = datetime.combine(
             forecast_date, time(), tzinfo=pytz.UTC

@@ -12,6 +12,6 @@ from src.assets.ingestion.caic_assets import caic_forecast_raw
 )
 def caic_ingestion_schedule(
     context: ScheduleEvaluationContext,
-):
+):  # pragma: no cover
     forecast_date = context.scheduled_execution_time.date().isoformat()
     yield RunRequest(partition_key=forecast_date)

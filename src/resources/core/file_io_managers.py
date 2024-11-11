@@ -40,7 +40,7 @@ class FileIOManager(ConfigurableIOManager):
 
     def handle_output(
         self, context: OutputContext, obj: object
-    ) -> None:  # pragma: no cover
+    ) -> None:
         """Required method for writing Dagster materialization outputs.
 
         Uses the _dump_fn to serialize the materialized asset result and writes the outputs to a file located at
@@ -52,7 +52,7 @@ class FileIOManager(ConfigurableIOManager):
         with open(output_file, "w") as f:
             dump_fn(obj, f)
 
-    def load_input(self, context: InputContext) -> object:  # pragma: no cover
+    def load_input(self, context: InputContext) -> object:
         """Required method for loading upstream Dagster materialization results as inputs.
 
         Uses the _load_fn to deserialize the asset materialization from a file located at

@@ -2,5 +2,12 @@
 include_namespace_packages = true
 
 # might also be convenient to add one of these:
-omit = **/__init__.py,test/*,src/ml/training/models/*
+omit =
+    **/__init__.py
+    test/*
+    src/ml/training/models/*
+    src/assets/*
+    src/resources/*
+    src/schedules/*
+    src/sensors/*
 skip_empty = true

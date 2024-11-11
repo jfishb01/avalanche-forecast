@@ -26,7 +26,7 @@ from src.partitions import colorado_region_forecast_partitions_def
     compute_kind="python",
     partitions_def=colorado_region_forecast_partitions_def,
 )
-def caic_forecast_raw(context: AssetExecutionContext) -> object:  # pragma: no cover
+def caic_forecast_raw(context: AssetExecutionContext) -> object:
     """Extract a CAIC avalanche forecast from the website and save it to a JSON file."""
     forecast_date = datetime.fromisoformat(context.partition_key).date()
     return context.resources.caic_resource.extract(forecast_date)
