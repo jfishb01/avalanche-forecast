@@ -25,24 +25,29 @@ env = os.getenv("DEFINITIONS", "DEV").upper()
 
 
 def env_assets(env: str) -> Sequence[AssetsDefinition]:
+    """Load assets according to the user environment."""
     return load_assets_from_modules([caic_assets])
 
 
 def env_jobs(env: str) -> Sequence[JobDefinition]:
+    """Load jobs according to the user environment."""
     return []
 
 
 def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
+    """Load schedules according to the user environment."""
     return [caic_ingestion_schedule]
 
 
 def env_sensors(env: str) -> Sequence[SensorDefinition]:
+    """Load sensors according to the user environment."""
     return []
 
 
 def env_resources(
     env: str,
 ) -> Dict[str, Union[ConfigurableResource, ConfigurableIOManager]]:
+    """Load resources according to the user environment."""
     if env == "DEV":
         dev_base_dir = "downloads/dev"
         return {
