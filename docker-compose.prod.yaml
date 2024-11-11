@@ -1,4 +1,3 @@
-version: '3.7'
 services:
   dagster-webserver:
     ports:
@@ -9,6 +8,8 @@ services:
     environment:
       - POSTGRES_PASSWORD=dagster_postgres_pwd
       - DEFINITIONS=prod
+    volumes:
+      - ./downloads:/opt/app/downloads
 
   dagster-postgres:
     image: "postgres:latest"
@@ -26,4 +27,12 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./dagster/prod/postgresql/data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./config/prod/dagster_storage

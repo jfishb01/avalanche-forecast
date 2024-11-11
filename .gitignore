@@ -1,10 +1,15 @@
-# Project artifacts
-dagster/
-downloads/
-*logs/
-*.logs_queue
-*.nux
+!*/.gitignore
+
+# Docker configuration
 docker-compose.override.yaml
+
+# Dagster run storage
+config/*
+!config/*/dagster.yaml
+
+# Project artifacts
+downloads
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
