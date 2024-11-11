@@ -7,7 +7,22 @@ set_env() {
   ln -s ./docker-compose.$env.yaml ./docker-compose.override.yaml
 }
 
+start_sandbox() {
+  # Start a container with bash and mount the application code as a volume to /sandbox
+  docker run \
+    --rm \
+    -it \
+    -e PYTHONPATH=/sandbox:/ \
+    -v $AVALANCHE_FORECAST_REPO:/sandbox \
+    -w /sandbox \
+    --entrypoint /bin/bash \
+    avalanche-forecast-dagster-webserver
+}
 
+############################################################################################################
+# Everything below this is used for running the application as an HTTP server. These aliases will slowly be
+# removed as the project is migrated to Dagster.
+############################################################################################################
 WEBSERVER_IMAGE_NAME="avalanche-forecast-webserver"
 DB_IMAGE_NAME_BASE="avalanche-forecast-db"
 DB_IMAGE_NAME_PERSISTENT="$DB_IMAGE_NAME_BASE-persistent"
