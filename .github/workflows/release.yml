@@ -1,4 +1,4 @@
-name: Miscellaneous
+name: Release
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
       - '*/tests/*'
 
 jobs:
-  validate_version_tag:
+  version_tag:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
