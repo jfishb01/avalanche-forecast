@@ -1,4 +1,4 @@
-import pandas as pd
+import pandera as pa
 from datetime import datetime
 from dagster import (
     asset,
@@ -9,8 +9,13 @@ from dagster import (
     AssetIn,
 )
 
+from src.utils.schema_helpers import conform_to_schema
 from src.partitions import colorado_region_forecast_partitions_def
 from src.core.ingestion.caic import flatten_to_regional_forecast_days_df
+from src.schemas.ingestion.avalanche_information_center_schemas import (
+    AvalancheForecastAssetSchema,
+    AvalancheForecastAssetSchemaDagsterType,
+)
 
 
 @asset(
@@ -54,9 +59,14 @@ def raw_caic_forecast(context: AssetExecutionContext) -> object:
         "partition_expr": "analysis_datetime",
         "schema": "external_sources",
     },
+    dagster_type=AvalancheForecastAssetSchemaDagsterType,
 )
 def caic_forecast(
     context: AssetExecutionContext, raw_caic_forecast: object
-) -> pd.DataFrame:
+) -> pa.typing.DataFrame[AvalancheForecastAssetSchema]:
     """Transform the raw CAIC avalanche forecast JSON and save it to the DB."""
-    return flatten_to_regional_forecast_days_df(raw_caic_forecast)
+    transformed = flatten_to_regional_forecast_days_df(raw_caic_forecast).assign(
+        run_id=context.run_id,
+        run_key=context.partition_key,
+    )
+    return conform_to_schema(transformed, AvalancheForecastAssetSchema)
