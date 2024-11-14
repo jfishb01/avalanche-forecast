@@ -1,3 +1,4 @@
+import pandas as pd
 from datetime import datetime
 from dagster import (
     asset,
@@ -5,9 +6,11 @@ from dagster import (
     Backoff,
     Jitter,
     AssetExecutionContext,
+    AssetIn,
 )
 
 from src.partitions import colorado_region_forecast_partitions_def
+from src.core.ingestion.caic import flatten_to_regional_forecast_days_df
 
 
 @asset(
@@ -26,7 +29,34 @@ from src.partitions import colorado_region_forecast_partitions_def
     compute_kind="python",
     partitions_def=colorado_region_forecast_partitions_def,
 )
-def caic_forecast_raw(context: AssetExecutionContext) -> object:
+def raw_caic_forecast(context: AssetExecutionContext) -> object:
     """Extract a CAIC avalanche forecast from the website and save it to a JSON file."""
     forecast_date = datetime.fromisoformat(context.partition_key).date()
     return context.resources.caic_resource.extract(forecast_date)
+
+
+@asset(
+    io_manager_key="duck_db_io_manager",
+    required_resource_keys={
+        "caic_resource",
+    },
+    ins={
+        "raw_caic_forecast": AssetIn(
+            key=raw_caic_forecast.key,
+            input_manager_key="json_file_io_manager",
+        ),
+    },
+    key_prefix="ingestion",
+    group_name="CAIC",
+    compute_kind="python",
+    partitions_def=colorado_region_forecast_partitions_def,
+    metadata={
+        "partition_expr": "analysis_datetime",
+        "schema": "external_sources",
+    },
+)
+def caic_forecast(
+    context: AssetExecutionContext, raw_caic_forecast: object
+) -> pd.DataFrame:
+    """Transform the raw CAIC avalanche forecast JSON and save it to the DB."""
+    return flatten_to_regional_forecast_days_df(raw_caic_forecast)

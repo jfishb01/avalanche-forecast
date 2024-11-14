@@ -1,0 +1,23 @@
+name: Miscellaneous
+
+on:
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - '*.gitignore'
+      - '*/tests/*'
+
+jobs:
+  validate_version_tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: modified_files
+        name: Get list of modified files
+        uses: jitterbit/get-changed-files@v1
+      - name: Validate version tag update
+        run: |
+          if ! [[ "${{ steps.modified_files.outputs.all }}" == *"pyproject.toml"* ]]; then
+            echo "The version tag was not updated in pyproject.toml"
+            exit 1;
+          fi
