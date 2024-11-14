@@ -2,6 +2,9 @@ import pandera as pa
 import pandas as pd
 from datetime import date
 from enum import IntEnum
+from dagster_pandera import pandera_schema_to_dagster_type
+
+from src.schemas.schema_config import BaseAssetSchema
 
 
 class IntEnumDefaultNoForecast(IntEnum):
@@ -48,10 +51,10 @@ class AvalancheLikelihoodEnum(IntEnumDefaultNoForecast):
 class AvalancheForecastSchema(pa.DataFrameModel):
     """Pandera schema definition of regional avalanche forecast datasets."""
 
-    distributor: str
     publish_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}
     )
+    distributor: str
     analysis_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}
     )
@@ -162,3 +165,12 @@ class AvalancheForecastSchema(pa.DataFrameModel):
     alp_prevalence_2: int = pa.Field(default=0)
     tln_prevalence_2: int = pa.Field(default=0)
     btl_prevalence_2: int = pa.Field(default=0)
+
+
+class AvalancheForecastAssetSchema(AvalancheForecastSchema, BaseAssetSchema):
+    pass
+
+
+AvalancheForecastAssetSchemaDagsterType = pandera_schema_to_dagster_type(
+    AvalancheForecastAssetSchema
+)
