@@ -12,6 +12,7 @@ from dagster import (
     ScheduleDefinition,
     SensorDefinition,
 )
+from dagster_duckdb_pandas import DuckDBPandasIOManager
 
 from src.assets.ingestion import caic_assets
 from src.schedules.ingestion_schedules import caic_ingestion_schedule
@@ -49,16 +50,22 @@ def env_resources(
 ) -> Dict[str, Union[ConfigurableResource, ConfigurableIOManager]]:
     """Load resources according to the user environment."""
     if env == "DEV":
-        dev_base_dir = "downloads/dev"
+        dev_base_dir = "data/dev"
         return {
+            "duck_db_io_manager": DuckDBPandasIOManager(
+                database=os.path.join(dev_base_dir, "avalanche_forecast.duckdb")
+            ),
             "json_file_io_manager": JSONFileIOManager(
                 root_path=dev_base_dir, dump_fn_kwargs={"indent": 2}
             ),
             "caic_resource": CAICResource(),
         }
     if env == "PROD":
-        prod_base_dir = "downloads/prod"
+        prod_base_dir = "data/prod"
         return {
+            "duck_db_io_manager": DuckDBPandasIOManager(
+                database=os.path.join(prod_base_dir, "avalanche_forecast.duckdb")
+            ),
             "json_file_io_manager": JSONFileIOManager(
                 root_path=prod_base_dir, dump_fn_kwargs={"indent": 2}
             ),

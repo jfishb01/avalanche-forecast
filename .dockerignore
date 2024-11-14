@@ -28,6 +28,7 @@ env/
 build/
 develop-eggs/
 dist/
+data/
 downloads/
 eggs/
 lib/
@@ -90,3 +91,9 @@ venv/
 
 # External resource configuration files
 resources/
+
+# Dagster
+config/*/dagster_storage
+config/*/logs
+config/*/.logs_queue
+config/*/.nux

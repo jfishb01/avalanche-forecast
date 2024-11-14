@@ -1,11 +1,11 @@
 from dagster import schedule, ScheduleEvaluationContext, RunRequest
 
 from src.utils.constants import DEFAULT_SCHEDULE_EXECUTION_STATUS
-from src.assets.ingestion.caic_assets import caic_forecast_raw
+from src.assets.ingestion.caic_assets import raw_caic_forecast
 
 
 @schedule(
-    target=caic_forecast_raw,
+    target=raw_caic_forecast,
     cron_schedule=f"0 8 * * *",
     default_status=DEFAULT_SCHEDULE_EXECUTION_STATUS,
     description=f"Schedule to ingest daily CAIC forecasts",

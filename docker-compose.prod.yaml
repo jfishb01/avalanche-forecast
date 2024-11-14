@@ -9,7 +9,7 @@ services:
       - POSTGRES_PASSWORD=dagster_postgres_pwd
       - DEFINITIONS=prod
     volumes:
-      - ./downloads:/opt/app/downloads
+      - ./data:/opt/app/data
 
   dagster-postgres:
     image: "postgres:latest"
