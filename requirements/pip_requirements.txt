@@ -19,3 +19,4 @@ dagster-postgres
 dagster-docker
 dagster-pandera
 dagster-webserver
+dask

@@ -34,7 +34,7 @@ def _try_get_field(
         return default
 
 
-def flatten_to_regional_forecast_days_df(
+def transform(
     raw_caic_forecast: Any,
 ) -> pa.typing.DataFrame[AvalancheForecastSchema]:
     """Transform raw forecasts into a list of records, one for each forecasted region for each day forecasted out.
@@ -51,7 +51,7 @@ def flatten_to_regional_forecast_days_df(
             continue
 
         # Forecasts are posted for a named date then indexed off of that for each subsequent forecast day out
-        top_level_forecast_date = REPORT_TIMEZONE.localize(
+        distribution_date = REPORT_TIMEZONE.localize(
             datetime.strptime(region["expiryDateTime"], DATETIME_FMT)
         ).date()
         analysis_datetime = REPORT_TIMEZONE.localize(
@@ -65,7 +65,7 @@ def flatten_to_regional_forecast_days_df(
             len(region["avalancheProblems"]["days"]),
         )
         for day in range(forecast_days_out):
-            forecast_date = top_level_forecast_date + timedelta(days=day)
+            forecast_date = distribution_date + timedelta(days=day)
             summary = _try_get_field(
                 region["avalancheSummary"]["days"], (day, "content"), ""
             )
@@ -73,9 +73,10 @@ def flatten_to_regional_forecast_days_df(
                 region["dangerRatings"]["days"], (day,), {}
             )
             region_forecast = dict(
-                distributor="CAIC",
+                forecast_center="CAIC",
                 publish_datetime=analysis_datetime,
                 analysis_datetime=analysis_datetime,
+                distribution_date=distribution_date,
                 forecast_date=forecast_date,
                 forecast_days_out=day,
                 forecast_date_season_day_number=date_to_day_number_of_avalanche_season(

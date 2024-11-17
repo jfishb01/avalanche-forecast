@@ -1,7 +1,7 @@
 from dagster import schedule, ScheduleEvaluationContext, RunRequest
 
 from src.utils.constants import DEFAULT_SCHEDULE_EXECUTION_STATUS
-from src.assets.ingestion.caic_assets import raw_caic_forecast
+from src.assets.ingestion.avalanche_forecast_center_assets import raw_caic_forecast
 
 
 @schedule(

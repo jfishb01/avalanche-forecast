@@ -54,10 +54,11 @@ class AvalancheForecastSchema(pa.DataFrameModel):
     publish_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}
     )
-    distributor: str
+    forecast_center: str
     analysis_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}
     )
+    distribution_date: date
     forecast_date: date
     forecast_days_out: int
     forecast_date_season_day_number: int
