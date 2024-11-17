@@ -14,8 +14,12 @@ from dagster import (
 )
 from dagster_duckdb_pandas import DuckDBPandasIOManager
 
-from src.assets.ingestion import caic_assets
+from src import jobs
+from src.assets.ingestion import avalanche_forecast_center_assets
 from src.schedules.ingestion_schedules import caic_ingestion_schedule
+from src.sensors.ingestion.avalanche_forecast_center_sensors import (
+    extracted_avalanche_forecast_center_forecast_sensor,
+)
 from src.resources.core.file_io_managers import JSONFileIOManager
 from src.resources.extraction.avalanche_information_center_resources import CAICResource
 
@@ -27,12 +31,12 @@ env = os.getenv("DEFINITIONS", "DEV").upper()
 
 def env_assets(env: str) -> Sequence[AssetsDefinition]:
     """Load assets according to the user environment."""
-    return load_assets_from_modules([caic_assets])
+    return load_assets_from_modules([avalanche_forecast_center_assets])
 
 
 def env_jobs(env: str) -> Sequence[JobDefinition]:
     """Load jobs according to the user environment."""
-    return []
+    return [jobs.avalanche_forecast_center_forecast_job]
 
 
 def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
@@ -42,7 +46,7 @@ def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
 
 def env_sensors(env: str) -> Sequence[SensorDefinition]:
     """Load sensors according to the user environment."""
-    return []
+    return [extracted_avalanche_forecast_center_forecast_sensor]
 
 
 def env_resources(

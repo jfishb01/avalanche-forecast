@@ -12,7 +12,7 @@ SEASON_END_DAY = 1
 def date_to_avalanche_season(d: date, use_upcoming_when_unmapped: bool = False) -> str:
     """Get the corresponding avalanche season for the date formatted as <start_year>/<end_year>.
 
-    The avalanche season is defined as running from September 1 through August 31. Anything else is marked as
+    The avalanche season is defined as running from September 1 through May 31. Anything else is marked as
     "OFF_SEASON".
 
     Args:
@@ -51,13 +51,25 @@ def date_to_day_number_of_avalanche_season(d: date) -> int:
     return (d - date(d.year - 1, SEASON_START_MONTH, SEASON_START_DAY)).days
 
 
-def get_avalanche_season_date_bounds(avalanche_season: str) -> Tuple[date, date]:
+def get_avalanche_season_date_bounds(
+    avalanche_season: str, inclusive: str = "left"
+) -> Tuple[date, date]:
     """Get the date bounds of the provided avalanche season."""
     start_year, end_year = avalanche_season.split("/")
-    return (
+    date_bounds = (
         date(int(start_year), SEASON_START_MONTH, SEASON_START_DAY),
         date(int(end_year), SEASON_END_MONTH, SEASON_END_DAY),
     )
+    if inclusive.upper() == "LEFT":
+        return date_bounds[0], date_bounds[1] - timedelta(days=1)
+    if inclusive.upper() == "RIGHT":
+        return date_bounds[0] + timedelta(days=1), date_bounds[1]
+    if inclusive.upper() == "BOTH":
+        return date_bounds
+    else:
+        raise ValueError(
+            "Unhandled value for parameter 'inclusive. Must be one of 'left'|'right'|'both'."
+        )
 
 
 def date_range(
