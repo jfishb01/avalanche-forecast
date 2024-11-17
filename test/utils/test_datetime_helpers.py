@@ -142,9 +142,19 @@ def test_date_to_day_number_of_avalanche_season(desc, date_to_test, expected):
     assert actual == expected
 
 
-def test_get_avalanche_season_date_bounds():
-    actual = get_avalanche_season_date_bounds("2000/2001")
+def test_get_avalanche_season_date_bounds__inclusive_left():
+    actual = get_avalanche_season_date_bounds("2000/2001", inclusive="left")
+    assert actual == (date(2000, 9, 1), date(2001, 5, 31))
+
+
+def test_get_avalanche_season_date_bounds__inclusive_both():
+    actual = get_avalanche_season_date_bounds("2000/2001", inclusive="both")
     assert actual == (date(2000, 9, 1), date(2001, 6, 1))
+
+
+def test_get_avalanche_season_date_bounds__inclusive_right():
+    actual = get_avalanche_season_date_bounds("2000/2001", inclusive="right")
+    assert actual == (date(2000, 9, 2), date(2001, 6, 1))
 
 
 def test_get_avalanche_season_date_bounds__invalid_season_name():
