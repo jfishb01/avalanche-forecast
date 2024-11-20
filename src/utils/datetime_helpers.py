@@ -1,5 +1,5 @@
-from datetime import date, timedelta
-from typing import Iterable, Tuple
+from datetime import datetime, date, timedelta
+from typing import Iterable, Tuple, Sequence
 
 
 OFF_SEASON = "OFF_SEASON"
@@ -82,3 +82,15 @@ def date_range(
     while current_date <= end_date:
         yield current_date
         current_date += timedelta(days=1)
+
+
+def try_strptime(date_string: str, formats: Sequence[str]) -> datetime:
+    """Tries to parse date_string into a datetime using formats, returning on the first format to match."""
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_string, fmt)
+        except:
+            pass
+    raise ValueError(
+        f"time data '{date_string}' does not match any of the formats: {formats}"
+    )

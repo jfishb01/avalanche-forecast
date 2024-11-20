@@ -48,7 +48,7 @@ class AvalancheLikelihoodEnum(IntEnumDefaultNoForecast):
     ALMOSTCERTAIN = 5
 
 
-class AvalancheForecastSchema(pa.DataFrameModel):
+class AvalancheForecastCenterForecastSchema(pa.DataFrameModel):
     """Pandera schema definition of regional avalanche forecast datasets."""
 
     publish_datetime: pd.DatetimeTZDtype = pa.Field(
@@ -168,7 +168,9 @@ class AvalancheForecastSchema(pa.DataFrameModel):
     btl_prevalence_2: int = pa.Field(default=0)
 
 
-class AvalancheForecastAssetSchema(AvalancheForecastSchema, BaseAssetSchema):
+class AvalancheForecastAssetSchema(
+    AvalancheForecastCenterForecastSchema, BaseAssetSchema
+):
     pass
 
 
