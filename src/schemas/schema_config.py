@@ -3,7 +3,7 @@
 import pytz
 import pandera as pa
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 
 
 class StrictDataFrameSchemaConfig(type):
@@ -23,14 +23,20 @@ class FlexibleDataFrameSchemaConfig(type):
 
 
 class BaseAssetSchema(pa.DataFrameModel):
+    # Base schema with metadata columns that should be inherited from for every asset materialization
     run_id: str
     run_key: str
     creation_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}, default=datetime.now(pytz.UTC)
     )
-    publish_datetime: pd.DatetimeTZDtype = pa.Field(
-        dtype_kwargs={"unit": "ms", "tz": "UTC"}
-    )
 
     class Config(metaclass=StrictDataFrameSchemaConfig):
         pass
+
+
+class BaseMLSchema(BaseAssetSchema):
+    # Base schema with required partition columns that should be included for all ML related assets.
+    forecast_date: date
+    forecast_area: str
+    forecast_center: str
+    area_id: str

@@ -8,16 +8,16 @@ from dagster import (
     AssetExecutionContext,
     InputContext,
     AssetKey,
+    MultiPartitionsDefinition,
+    StaticPartitionsDefinition,
 )
 
 from src.utils.schema_helpers import conform_to_schema
 from src.partitions import (
-    distribution_date_partitions_def,
-    forecast_area_partitions_def,
-    daily_avalanche_forecast_center_forecast_partitions_def,
+    forecast_date_partitions_def,
 )
 from src.core.ingestion import caic
-from src.schemas.ingestion.avalanche_information_center_schemas import (
+from src.schemas.ingestion.avalanche_forecast_center_schemas import (
     AvalancheForecastAssetSchema,
     AvalancheForecastAssetSchemaDagsterType,
 )
@@ -37,7 +37,7 @@ from src.schemas.ingestion.avalanche_information_center_schemas import (
     ),
     group_name="avalanche_forecast_center",
     compute_kind="python",
-    partitions_def=distribution_date_partitions_def,
+    partitions_def=forecast_date_partitions_def,
 )
 def raw_caic_forecast(context: AssetExecutionContext) -> object:
     """Extract a CAIC avalanche forecast from the website and save it to a JSON file."""
@@ -51,7 +51,12 @@ def raw_caic_forecast(context: AssetExecutionContext) -> object:
     key_prefix="ingestion",
     group_name="avalanche_forecast_center",
     compute_kind="python",
-    partitions_def=daily_avalanche_forecast_center_forecast_partitions_def,
+    partitions_def=MultiPartitionsDefinition(
+        {
+            "distribution_date": forecast_date_partitions_def,
+            "forecast_center": StaticPartitionsDefinition(["CAIC", "NWAC"]),
+        }
+    ),
     metadata={
         "partition_expr": {
             "forecast_center": "forecast_center",
@@ -61,7 +66,7 @@ def raw_caic_forecast(context: AssetExecutionContext) -> object:
     },
     dagster_type=AvalancheForecastAssetSchemaDagsterType,
 )
-def avalanche_forecast_center_forecast(
+def combined_avalanche_forecast_center_forecast(
     context: AssetExecutionContext,
 ) -> pa.typing.DataFrame[AvalancheForecastAssetSchema]:
     """Transform the extracted avalanche forecast center file and save it to the DB.
@@ -83,12 +88,6 @@ def avalanche_forecast_center_forecast(
             run_id=context.run_id,
             run_key=context.partition_key,
         )
-    else:
-        raise ValueError(f"Unsupported forecast center: '{forecast_center}'")
+        return conform_to_schema(transformed, AvalancheForecastAssetSchema)
 
-    # Create partitions for all the areas included in the forecast center's forecast.
-    forecast_regions = [
-        f"{forecast_center}.{area_id}" for area_id in transformed["area_id"].unique()
-    ]
-    forecast_area_partitions_def.build_add_request(forecast_regions)
-    return conform_to_schema(transformed, AvalancheForecastAssetSchema)
+    raise ValueError(f"Unsupported avalanche forecast center: '{forecast_center}'")

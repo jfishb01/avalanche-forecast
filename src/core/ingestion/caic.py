@@ -6,17 +6,21 @@ from typing import Optional, Any, Union, Sequence
 
 from src.utils.schema_helpers import conform_to_schema
 from src.utils.datetime_helpers import (
+    try_strptime,
     date_to_avalanche_season,
     date_to_day_number_of_avalanche_season,
 )
-from src.schemas.ingestion.avalanche_information_center_schemas import (
-    AvalancheForecastSchema,
+from src.schemas.ingestion.avalanche_forecast_center_schemas import (
+    AvalancheForecastCenterForecastSchema,
     AvalancheRiskEnum,
     AvalancheLikelihoodEnum,
     AvalancheProblemEnum,
 )
 
-DATETIME_FMT = "%Y-%m-%dT%H:%M:%SZ"
+DATETIME_FMTS = [
+    "%Y-%m-%dT%H:%M:%SZ",
+    "%Y-%m-%dT%H:%M:%S.%fZ",
+]
 REPORT_TIMEZONE = pytz.timezone("America/Denver")
 
 
@@ -36,7 +40,7 @@ def _try_get_field(
 
 def transform(
     raw_caic_forecast: Any,
-) -> pa.typing.DataFrame[AvalancheForecastSchema]:
+) -> pa.typing.DataFrame[AvalancheForecastCenterForecastSchema]:
     """Transform raw forecasts into a list of records, one for each forecasted region for each day forecasted out.
 
     CAIC posts forecasts for all regions at their endpoint. This method flattens the JSON posted into a dataframe
@@ -52,10 +56,10 @@ def transform(
 
         # Forecasts are posted for a named date then indexed off of that for each subsequent forecast day out
         distribution_date = REPORT_TIMEZONE.localize(
-            datetime.strptime(region["expiryDateTime"], DATETIME_FMT)
+            try_strptime(region["expiryDateTime"], DATETIME_FMTS)
         ).date()
         analysis_datetime = REPORT_TIMEZONE.localize(
-            datetime.strptime(region["issueDateTime"], DATETIME_FMT)
+            try_strptime(region["issueDateTime"], DATETIME_FMTS)
         ).astimezone(pytz.UTC)
 
         # Forecasts for each day out are posted as lists under multiple keys with potentially varying lengths.
@@ -141,4 +145,6 @@ def transform(
                 )
                 region_forecast |= problem_prevalence
             transformed.append(region_forecast)
-    return conform_to_schema(pd.DataFrame(transformed), AvalancheForecastSchema)
+    return conform_to_schema(
+        pd.DataFrame(transformed), AvalancheForecastCenterForecastSchema
+    )
