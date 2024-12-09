@@ -7,7 +7,7 @@ from dagster import (
 )
 
 from src.jobs import target_creation_job
-from src.partitions import forecast_area_partitions_def
+from src.partitions import region_id_partitions_def
 from src.assets.ingestion.avalanche_forecast_center_assets import (
     combined_avalanche_forecast_center_forecast,
 )
@@ -33,14 +33,14 @@ def combined_avalanche_forecast_center_forecast_target_materialization_sensor(
     forecast_center = asset_event.dagster_event.partition.keys_by_dimension[
         "forecast_center"
     ]
-    forecast_areas_to_process = [
-        forecast_area
-        for forecast_area in forecast_area_partitions_def.get_partition_keys()
-        if forecast_area.startswith(f"{forecast_center}.")
+    region_ids_to_process = [
+        region_id
+        for region_id in region_id_partitions_def.get_partition_keys()
+        if region_id.startswith(f"{forecast_center}.")
     ]
-    for forecast_area in forecast_areas_to_process:
+    for region_id in region_ids_to_process:
         yield RunRequest(
             partition_key=MultiPartitionKey(
-                {"forecast_date": forecast_date, "forecast_area": forecast_area}
+                {"forecast_date": forecast_date, "region_id": region_id}
             )
         )

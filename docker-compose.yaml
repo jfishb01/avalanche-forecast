@@ -1,3 +1,10 @@
 services:
   dagster-webserver:
     build: .
+  mlflow-webserver:
+      restart: always
+      image: ghcr.io/mlflow/mlflow:latest
+      container_name: mlflow_webserver
+      ports:
+          - "5000:5000"
+      command: mlflow server --backend-store-uri file:/opt/dev/data/dev/mlflow/mlruns --artifacts-destination file:/opt/dev/data/dev/mlflow/artifacts --serve-artifacts --host 0.0.0.0

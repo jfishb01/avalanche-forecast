@@ -72,6 +72,18 @@ def get_avalanche_season_date_bounds(
         )
 
 
+def get_prior_avalanche_season(avalanche_season: str) -> str:
+    """Get the prior avalanche season."""
+    start_year, end_year = avalanche_season.split("/")
+    return f"{int(start_year) - 1}/{int(end_year) - 1}"
+
+
+def get_next_avalanche_season(avalanche_season: str) -> str:
+    """Get the following year's avalanche season."""
+    start_year, end_year = avalanche_season.split("/")
+    return f"{int(start_year) + 1}/{int(end_year) + 1}"
+
+
 def date_range(
     start_date: date, end_date: date, inclusive: bool = True
 ) -> Iterable[date]:
