@@ -61,10 +61,10 @@ def target(context: AssetExecutionContext) -> pa.typing.DataFrame[TargetSchema]:
                 "off_season": OFF_SEASON,
             },
         ).df()
-    day_of_forecasts = source_data_df[source_data_df["forecast_days_out"] == 0].sort_values(
-        by=["publish_datetime"]
-    ).drop_duplicates(
-        subset=["region_id", "forecast_date"], keep="last"
+    day_of_forecasts = (
+        source_data_df[source_data_df["forecast_days_out"] == 0]
+        .sort_values(by=["publish_datetime"])
+        .drop_duplicates(subset=["region_id", "forecast_date"], keep="last")
     )
     target_df = day_of_forecasts.assign(
         run_key=day_of_forecasts["forecast_date"].astype(str)

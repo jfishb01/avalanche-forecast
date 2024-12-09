@@ -11,6 +11,7 @@ class MlModelProblem0(BaseMLModel):
 
     Uses the prior day's forecast published by the avalanche forecast center as a feature.
     """
+
     def __init__(self):
         parameters = dict(random_state=42)
         super().__init__(

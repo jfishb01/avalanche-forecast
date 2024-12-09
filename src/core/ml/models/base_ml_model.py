@@ -56,9 +56,7 @@ class BaseMLModel(PythonModel):
         set_model(self)
         model_name = f"{self.name}.{region_id}.{avalanche_season}".replace("/", "-")
         model_info = log_model(
-            python_model=inspect.getfile(
-                type(self)
-            ),
+            python_model=inspect.getfile(type(self)),
             artifact_path=model_name,
             signature=self.signature,
             registered_model_name=model_name,
