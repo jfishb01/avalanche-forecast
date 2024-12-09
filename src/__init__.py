@@ -13,13 +13,15 @@ from dagster import (
     SensorDefinition,
 )
 from dagster_duckdb import DuckDBResource
-from dagster_duckdb_pandas import DuckDBPandasIOManager
+
+from src.resources.core.duck_db_io_manager import DuckDBPandasIOManager
 
 from src import jobs
 from src.assets.ingestion import avalanche_forecast_center_assets
 from src.assets.ml.features_and_targets import target_assets
 from src.assets.ml.features_and_targets import avalanche_forecast_center_feature_assets
-from src.schedules.ingestion_schedules import caic_ingestion_schedule
+from src.assets.ml.models import problem_type_assets
+from src.schedules import ingestion_schedules
 from src.sensors.ingestion.avalanche_forecast_center_sensors import (
     raw_caic_forecast_materialization_sensor,
 )
@@ -29,8 +31,12 @@ from src.sensors.ml.features_and_targets.target_sensors import (
 from src.sensors.ml.features_and_targets.avalanche_forecast_center_feature_sensors import (
     combined_avalanche_forecast_center_forecast_feature_materialization_sensor,
 )
+from src.resources.core.mlflow_resource import MlflowResource
 from src.resources.core.file_io_managers import JSONFileIOManager
-from src.resources.extraction.avalanche_information_center_resources import CAICResource
+from src.resources.extraction.avalanche_information_center_resources import (
+    CAICResource,
+    NWACResource,
+)
 
 warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
@@ -45,6 +51,7 @@ def env_assets(env: str) -> Sequence[AssetsDefinition]:
             avalanche_forecast_center_assets,
             target_assets,
             avalanche_forecast_center_feature_assets,
+            problem_type_assets,
         ]
     )
 
@@ -60,7 +67,10 @@ def env_jobs(env: str) -> Sequence[JobDefinition]:
 
 def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
     """Load schedules according to the user environment."""
-    return [caic_ingestion_schedule]
+    return [
+        ingestion_schedules.caic_ingestion_schedule,
+        ingestion_schedules.nwac_ingestion_schedule,
+    ]
 
 
 def env_sensors(env: str) -> Sequence[SensorDefinition]:
@@ -79,30 +89,50 @@ def env_resources(
     if env == "DEV":
         dev_base_dir = "data/dev"
         return {
+            "source_data_duck_db_io_manager": DuckDBPandasIOManager(
+                database=os.path.join(dev_base_dir, "source_data.duckdb")
+            ),
             "duck_db_io_manager": DuckDBPandasIOManager(
                 database=os.path.join(dev_base_dir, "avalanche_forecast.duckdb")
             ),
             "json_file_io_manager": JSONFileIOManager(
                 root_path=dev_base_dir, dump_fn_kwargs={"indent": 2}
             ),
+            "source_data_duck_db_resource": DuckDBResource(
+                database=os.path.join(dev_base_dir, "source_data.duckdb")
+            ),
             "duck_db_resource": DuckDBResource(
                 database=os.path.join(dev_base_dir, "avalanche_forecast.duckdb")
             ),
+            "mlflow_resource": MlflowResource(
+                tracking_server_uri="http://mlflow-webserver:5000",
+            ),
             "caic_resource": CAICResource(),
+            "nwac_resource": NWACResource(),
         }
     if env == "PROD":
         prod_base_dir = "data/prod"
         return {
+            "source_data_duck_db_io_manager": DuckDBPandasIOManager(
+                database=os.path.join(prod_base_dir, "source_data.duckdb")
+            ),
             "duck_db_io_manager": DuckDBPandasIOManager(
                 database=os.path.join(prod_base_dir, "avalanche_forecast.duckdb")
             ),
             "json_file_io_manager": JSONFileIOManager(
                 root_path=prod_base_dir, dump_fn_kwargs={"indent": 2}
             ),
+            "source_data_duck_db_resource": DuckDBPandasIOManager(
+                database=os.path.join(prod_base_dir, "source_data.duckdb")
+            ),
             "duck_db_resource": DuckDBResource(
                 database=os.path.join(prod_base_dir, "avalanche_forecast.duckdb")
             ),
+            "mlflow_resource": MlflowResource(
+                tracking_server_uri="http://mlflow-webserver:5000",
+            ),
             "caic_resource": CAICResource(),
+            "nwac_resource": NWACResource(),
         }
 
 

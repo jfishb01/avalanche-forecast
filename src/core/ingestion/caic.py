@@ -1,9 +1,10 @@
 import pytz
 import pandas as pd
 import pandera as pa
-from datetime import datetime, timedelta
-from typing import Optional, Any, Union, Sequence
+from datetime import timedelta
+from typing import Any
 
+from src.utils.ingestion_helpers import try_get_field
 from src.utils.schema_helpers import conform_to_schema
 from src.utils.datetime_helpers import (
     try_strptime,
@@ -22,20 +23,6 @@ DATETIME_FMTS = [
     "%Y-%m-%dT%H:%M:%S.%fZ",
 ]
 REPORT_TIMEZONE = pytz.timezone("America/Denver")
-
-
-def _try_get_field(
-    obj: Union[dict, list],
-    keys: Sequence[Union[int, str]],
-    default: Optional[Any] = None,
-) -> Optional[Any]:
-    """Try to extract the nested keys from the JSON object and if it doesn't exist, return the default value."""
-    try:
-        for k in keys:
-            obj = obj[k]
-        return obj
-    except (KeyError, IndexError):
-        return default
 
 
 def transform(
@@ -70,13 +57,14 @@ def transform(
         )
         for day in range(forecast_days_out):
             forecast_date = distribution_date + timedelta(days=day)
-            summary = _try_get_field(
+            summary = try_get_field(
                 region["avalancheSummary"]["days"], (day, "content"), ""
             )
-            elevation_dangers = _try_get_field(
+            elevation_dangers = try_get_field(
                 region["dangerRatings"]["days"], (day,), {}
             )
             region_forecast = dict(
+                region_id=f"CAIC.{region['areaId']}",
                 forecast_center="CAIC",
                 publish_datetime=analysis_datetime,
                 analysis_datetime=analysis_datetime,
@@ -96,7 +84,7 @@ def transform(
                 danger_btl=AvalancheRiskEnum(elevation_dangers.get("btl", "").upper()),
             )
 
-            forecasted_problems = _try_get_field(
+            forecasted_problems = try_get_field(
                 region["avalancheProblems"]["days"], (day,), []
             )
             # Iterate through all the problems for the forecast date, skipping any that are empty (they'll be

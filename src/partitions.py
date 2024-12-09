@@ -1,5 +1,6 @@
 import pytz
-from typing import Tuple
+import pandas as pd
+from typing import Tuple, List, Sequence
 from datetime import datetime, date
 from dagster import (
     DailyPartitionsDefinition,
@@ -8,38 +9,69 @@ from dagster import (
     MultiPartitionKey,
 )
 
+from src.utils.datetime_helpers import date_to_avalanche_season
 
-def forecast_date_and_area_partitions_from_key(
+
+def forecast_date_and_region_id_partitions_from_key(
     partition_key: MultiPartitionKey,
 ) -> Tuple[date, str]:
-    """Split the daily_area_forecast_partitions_def into its forecast_date and forecast_area components."""
+    """Split the daily_region_forecast_partitions_def into its forecast_date and region_id components."""
     forecast_date = datetime.fromisoformat(
         partition_key.keys_by_dimension["forecast_date"]
     ).date()
-    forecast_area = partition_key.keys_by_dimension["forecast_area"]
-    return forecast_date, forecast_area
+    region_id = partition_key.keys_by_dimension["region_id"]
+    return forecast_date, region_id
 
 
-def forecast_center_and_area_id_from_forecast_area(
-    forecast_area: str,
+def forecast_date_and_region_id_partitions_from_key_list(
+    partition_keys: Sequence[str],
+) -> Tuple[List[date], List[str]]:
+    """Apply forecast_date_and_region_id_partitions_from_key to a list of partition keys."""
+    forecast_dates, region_ids = zip(
+        *[
+            forecast_date_and_region_id_partitions_from_key(partition_key)
+            for partition_key in partition_keys
+        ]
+    )
+    return list(set(forecast_dates)), list(set(region_ids))
+
+
+def avalanche_season_and_region_id_partitions_from_key(
+    partition_key: MultiPartitionKey,
 ) -> Tuple[str, str]:
-    """Split a forecast_area string into components of avalanche forecast center and area ID."""
-    forecast_center, area_id = forecast_area.split(".", 1)
-    return forecast_center, area_id
+    """Split the annual_region_forecast_partitions_def into its avalanche_season and region_id components."""
+    avalanche_season = partition_key.keys_by_dimension["avalanche_season"]
+    region_id = partition_key.keys_by_dimension["region_id"]
+    return avalanche_season, region_id
 
 
 # Static partitions definition for all area IDs belonging to each avalanche forecast center
-forecast_area_partitions_def = StaticPartitionsDefinition(
-    [
-        "CAIC.efc9235da6ac8cf1c6873ceed63568e0d51371ada5a31dd0ffa4e7e35908f376",
-        "CAIC.4a8152341231e8038706c6f855c56d38679433bd8b401573c4eed9d7d76cae71",
-        "CAIC.128dd258177cb3cd83a5e91f8d5342b0ad917a0a2759fb600818c9f7aa01dc56",
-        "CAIC.17cccd88f3dd4a93834f348c57aa75c0379ef1d9fa364ac3aa491442e9e23970",
-        "CAIC.c65550169c6b48400b2e15153beb523f3acf325607b94b10a0d6beb2aa1ab3e0",
-        "CAIC.5a85f8a5c5c6da01b4c0504b0a4012d28bcdf27e8aa95f4c974e92dad834c8e8",
-        "CAIC.61c52bf2655339bedb5d0923d3acbc748a6141dbf732ec5742340d2293827c58",
-        "CAIC.918583ebeb62fcad25d1f80c9b3fade2f32e4de5e85f4d0159244027b013394e",
-    ]
+nwac_area_ids = [
+    "1128",  # Olympics,
+    "1129",  # West Slopes North
+    "1130",  # West Slopes Central
+    "1131",  # West Slopes South
+    "1132",  # Stevens Pass
+    "1136",  # Snoqualmie Pass
+    "1137",  # East Slopes North
+    "1138",  # East Slopes Central
+    "1139",  # East Slopes South
+    "1140",  # Mt Hood
+]
+region_id_partitions_def = StaticPartitionsDefinition(
+    [f"NWAC.{area_id}" for area_id in nwac_area_ids]
+)
+
+# Static partitions definition for historical tracked avalanche seasons up to the current season
+avalanche_season_partitions_def = StaticPartitionsDefinition(
+    sorted(
+        set(
+            [
+                date_to_avalanche_season(dt.date(), use_upcoming_when_unmapped=True)
+                for dt in pd.date_range(date(2020, 1, 1), date.today()).to_pydatetime()
+            ]
+        )
+    )
 )
 
 # Daily partition definition for each date that will be forecasted
@@ -49,10 +81,18 @@ forecast_date_partitions_def = DailyPartitionsDefinition(
     end_offset=1,  # Ensure a partition for today exists
 )
 
-# Multipartition on forecast date by area to be used by all models and features
-daily_area_forecast_partitions_def = MultiPartitionsDefinition(
+# Multipartition on forecast date by region to be used by all models and features
+daily_region_forecast_partitions_def = MultiPartitionsDefinition(
     {
         "forecast_date": forecast_date_partitions_def,
-        "forecast_area": forecast_area_partitions_def,
+        "region_id": region_id_partitions_def,
+    }
+)
+
+# Multipartition on avalanche season by region to be used for annual model training
+annual_region_forecast_partitions_def = MultiPartitionsDefinition(
+    {
+        "avalanche_season": avalanche_season_partitions_def,
+        "region_id": region_id_partitions_def,
     }
 )

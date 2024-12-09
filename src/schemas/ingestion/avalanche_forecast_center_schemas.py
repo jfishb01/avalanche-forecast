@@ -54,6 +54,7 @@ class AvalancheForecastCenterForecastSchema(pa.DataFrameModel):
     publish_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}
     )
+    region_id: str
     forecast_center: str
     analysis_datetime: pd.DatetimeTZDtype = pa.Field(
         dtype_kwargs={"unit": "ms", "tz": "UTC"}

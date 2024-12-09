@@ -37,6 +37,10 @@ class BaseAssetSchema(pa.DataFrameModel):
 class BaseMLSchema(BaseAssetSchema):
     # Base schema with required partition columns that should be included for all ML related assets.
     forecast_date: date
-    forecast_area: str
-    forecast_center: str
-    area_id: str
+    region_id: str
+
+
+class BaseMLDeploymentSchema(BaseAssetSchema):
+    problem_type_0: str
+    problem_type_1: str
+    problem_type_2: str
