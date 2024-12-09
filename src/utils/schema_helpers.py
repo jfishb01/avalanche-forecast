@@ -1,6 +1,5 @@
 import pandas as pd
 import pandera as pa
-from dagster import DagsterType
 
 
 def conform_to_schema(
