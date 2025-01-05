@@ -1,0 +1,9 @@
+- model: problem_0
+  classname: MlModelProblem0
+  release: v000
+- model: problem_1
+  classname: MlModelProblem1
+  release: v000
+- model: problem_2
+  classname: MlModelProblem2
+  release: v000

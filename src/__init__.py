@@ -14,8 +14,6 @@ from dagster import (
 )
 from dagster_duckdb import DuckDBResource
 
-from src.resources.core.duck_db_io_manager import DuckDBPandasIOManager
-
 from src import jobs
 from src.assets.ingestion import avalanche_forecast_center_assets
 from src.assets.ml.features_and_targets import target_assets
@@ -23,7 +21,7 @@ from src.assets.ml.features_and_targets import avalanche_forecast_center_feature
 from src.assets.ml.models import problem_type_assets
 from src.schedules import ingestion_schedules
 from src.sensors.ingestion.avalanche_forecast_center_sensors import (
-    raw_caic_forecast_materialization_sensor,
+    raw_nwac_forecast_materialization_sensor,
 )
 from src.sensors.ml.features_and_targets.target_sensors import (
     combined_avalanche_forecast_center_forecast_target_materialization_sensor,
@@ -31,8 +29,10 @@ from src.sensors.ml.features_and_targets.target_sensors import (
 from src.sensors.ml.features_and_targets.avalanche_forecast_center_feature_sensors import (
     combined_avalanche_forecast_center_forecast_feature_materialization_sensor,
 )
+from src.resources.config_resources import ModelDeploymentsConfigResource
 from src.resources.core.mlflow_resource import MlflowResource
 from src.resources.core.file_io_managers import JSONFileIOManager
+from src.resources.core.duck_db_io_manager import DuckDBPandasIOManager
 from src.resources.extraction.avalanche_information_center_resources import (
     CAICResource,
     NWACResource,
@@ -68,7 +68,6 @@ def env_jobs(env: str) -> Sequence[JobDefinition]:
 def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
     """Load schedules according to the user environment."""
     return [
-        ingestion_schedules.caic_ingestion_schedule,
         ingestion_schedules.nwac_ingestion_schedule,
     ]
 
@@ -76,7 +75,7 @@ def env_schedules(env: str) -> Sequence[ScheduleDefinition]:
 def env_sensors(env: str) -> Sequence[SensorDefinition]:
     """Load sensors according to the user environment."""
     return [
-        raw_caic_forecast_materialization_sensor,
+        raw_nwac_forecast_materialization_sensor,
         combined_avalanche_forecast_center_forecast_target_materialization_sensor,
         combined_avalanche_forecast_center_forecast_feature_materialization_sensor,
     ]
@@ -106,6 +105,10 @@ def env_resources(
             ),
             "mlflow_resource": MlflowResource(
                 tracking_server_uri="http://mlflow-webserver:5000",
+                web_browser_uri="http://localhost:5000",
+            ),
+            "model_deployments_config_resource": ModelDeploymentsConfigResource(
+                config_file_path="src/config/model_deployments.yaml"
             ),
             "caic_resource": CAICResource(),
             "nwac_resource": NWACResource(),
@@ -130,6 +133,10 @@ def env_resources(
             ),
             "mlflow_resource": MlflowResource(
                 tracking_server_uri="http://mlflow-webserver:5000",
+                web_browser_uri="http://localhost:5000",
+            ),
+            "model_deployments_config_resource": ModelDeploymentsConfigResource(
+                config_file_path="src/config/prod_model_config.yaml"
             ),
             "caic_resource": CAICResource(),
             "nwac_resource": NWACResource(),

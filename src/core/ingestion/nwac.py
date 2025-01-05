@@ -20,6 +20,22 @@ DATETIME_FMTS = [
 ]
 REPORT_TIMEZONE = pytz.timezone("America/Los_Angeles")
 
+# At some point NWAC changed all their region IDs so create a map of region name to ID using the originally
+# posted region IDs. For NWAC the region names seem to be more consistent than the IDs (this is not true for
+# all forecast centers).
+REGION_ID_MAPPINGS = {
+    "Olympics": 1128,
+    "West Slopes North": 1129,
+    "West Slopes Central": 1130,
+    "West Slopes South": 1131,
+    "Stevens Pass": 1132,
+    "Snoqualmie Pass": 1136,
+    "East Slopes North": 1137,
+    "East Slopes Central": 1138,
+    "East Slopes South": 1139,
+    "Mt Hood": 1140,
+}
+
 
 def _map_aspect_elevation_to_schema_field(aspect_elevation: str) -> str:
     """NWAC uses different language for aspect elevations than is defined in our schema, so we need to map them."""
@@ -125,11 +141,14 @@ def transform(
             region_forecast |= problem_prevalence
 
         for region in region_group["forecast_zone"]:
+            # Try to map the region name to the known ID and if the name can't map, use whatever region ID
+            # was originally posted in the file
+            area_id = REGION_ID_MAPPINGS.get(region["name"], region["id"])
             region_forecast |= dict(
                 area_name=region["name"],
-                area_id=str(region["id"]),
+                area_id=str(area_id),
                 polygons=region["zone_id"],
-                region_id=f"NWAC.{region['id']}",
+                region_id=f"NWAC.{area_id}",
             )
         transformed.append(region_forecast)
     return conform_to_schema(

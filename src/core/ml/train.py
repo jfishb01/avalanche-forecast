@@ -19,8 +19,8 @@ def train_model(
     db_resource: DuckDBResource,
 ) -> Tuple[np.array, np.array]:
     """Train the model for a given season and region and return a tuple of the observed values and predictions."""
-    features = model.get_features(avalanche_season, region_id, db_resource)
-    targets = model.get_targets(avalanche_season, region_id, db_resource)
+    features = model.get_features_train(avalanche_season, region_id, db_resource)
+    targets = model.get_targets_train(avalanche_season, region_id, db_resource)
     test_start_date, _ = get_avalanche_season_date_bounds(
         get_prior_avalanche_season(avalanche_season)
     )
@@ -29,7 +29,7 @@ def train_model(
     )
     model.fit(X_train, y_train)
 
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(None, X_test)
 
     # Infer the model signature
     model.signature = infer_signature(X_test, y_pred)

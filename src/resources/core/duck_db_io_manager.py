@@ -1,9 +1,9 @@
-from typing import Sequence, Union
+from typing import Sequence, Union, Any, cast
 import duckdb
+import pandas as pd
 from dagster import InputContext, OutputContext
-from dagster_duckdb_pandas import DuckDBPandasIOManager as LibraryDuckDBPandasIOManager
+from dagster_duckdb_pandas import DuckDBPandasIOManager as LibraryDuckDBPandasIOManager, DuckDBPandasTypeHandler
 from dagster_duckdb.io_manager import DuckDbClient
-
 from dagster._core.storage.db_io_manager import (
     DbIOManager,
     TablePartitionDimension,
@@ -24,13 +24,29 @@ class DuckDBPandasIOManager(LibraryDuckDBPandasIOManager):
             db_client=_DuckDbClient(),
             database=self.database,
             schema=self.schema_,
-            type_handlers=self.type_handlers(),
+            type_handlers=[_DuckDBPandasTypeHandler()],
             default_load_type=self.default_load_type(),
         )
 
 
 class _DbIOManager(DbIOManager):
     """Internal class fixing the IO manager multi-partition bug."""
+
+    def load_input(self, context: InputContext) -> object:
+        """Overrides the buggy base class method and loads the correct partition for a multi-partition key."""
+        obj_type = context.dagster_type.typing_type
+        if obj_type is Any and self._default_load_type is not None:
+            load_type = self._default_load_type
+        else:
+            load_type = obj_type
+
+        self._check_supported_type(load_type)
+
+        table_slice = self._get_table_slice(context, cast(OutputContext, context.upstream_output))
+
+        with self._db_client.connect(context, table_slice) as conn:
+            return self._handlers_by_type[load_type].load_input(context, table_slice, conn)  # type: ignore  # (pyright bug)
+
 
     def _get_table_slice(
         self, context: Union[OutputContext, InputContext], output_context: OutputContext
@@ -100,3 +116,13 @@ def _partition_where_clause(
     return " AND\n".join(
         [f"  {col} IN ({filter_str})" for col, filter_str in filters.items()]
     )
+
+
+class _DuckDBPandasTypeHandler(DuckDBPandasTypeHandler):
+    def load_input(
+        self, context: InputContext, table_slice: TableSlice, connection
+    ) -> pd.DataFrame:
+        """Loads the input as a Pandas DataFrame."""
+        if table_slice.partition_dimensions and len(context.asset_partition_keys) == 0:
+            return pd.DataFrame()
+        return connection.execute(_DuckDbClient.get_select_statement(table_slice)).fetchdf()
