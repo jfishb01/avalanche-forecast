@@ -34,6 +34,7 @@ def raw_caic_forecast_materialization_sensor(
         )
     )
 
+
 @asset_sensor(
     asset_key=raw_nwac_forecast.key, job=combined_avalanche_forecast_center_forecast_job
 )

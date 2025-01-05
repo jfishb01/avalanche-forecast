@@ -14,11 +14,15 @@ from src.assets.ml.features_and_targets.target_assets import target
 from src.assets.ml.features_and_targets.avalanche_forecast_center_feature_assets import (
     avalanche_forecast_center_feature,
 )
-from src.assets.ml.models.asset_helpers import trained_model_asset, model_inference_asset
+from src.assets.ml.models.asset_helpers import (
+    trained_model_asset,
+    model_inference_asset,
+)
 from src.schemas.ml.inference_schemas import ForecastSchema, ForecastSchemaDagsterType
 
 
 PROBLEM_0_MODEL_NAME = "problem_0"
+
 
 @asset(
     required_resource_keys={

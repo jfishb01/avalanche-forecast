@@ -54,7 +54,12 @@ class BaseMLModel(PythonModel):
         """Fit the model to the training set."""
         self.model.fit(X_train, y_train)
 
-    def predict(self, context: Optional[PythonModelContext], model_input: np.array, params: Optional[dict] = None) -> np.array:
+    def predict(
+        self,
+        context: Optional[PythonModelContext],
+        model_input: np.array,
+        params: Optional[dict] = None,
+    ) -> np.array:
         """Generate a prediction using the model inputs. Must shadow the signature of base PythonModel class.
 
         Args:
@@ -79,7 +84,9 @@ class BaseMLModel(PythonModel):
     def load(self, avalanche_season: str, region_id: str) -> None:
         """Load the model from MLflow."""
         set_model(self)
-        self.model = load_model(f"models:/{self.id(avalanche_season, region_id)}@{self.mlflow_deployment_alias}")
+        self.model = load_model(
+            f"models:/{self.id(avalanche_season, region_id)}@{self.mlflow_deployment_alias}"
+        )
 
     def metrics(self, y_true: np.array, y_pred: np.array, **kwargs) -> Dict[str, float]:
         raise NotImplementedError
@@ -158,15 +165,13 @@ class BaseMLModel(PythonModel):
                     },
                 ).df()
                 feature_dfs.append(features)
-        return reduce(
-            lambda x, y: pd.merge(x, y, hpw="inner"), feature_dfs
-        )
+        return reduce(lambda x, y: pd.merge(x, y, hpw="inner"), feature_dfs)
 
 
 class ModelFactory:
     @staticmethod
     def create_model_instance_from_config(
-            model_config: Dict[str, Any],
+        model_config: Dict[str, Any],
     ) -> BaseMLModel:
         """Given a model deployment configuration, instantiate the corresponding model release."""
         module = importlib.import_module(

@@ -4,7 +4,6 @@ from typing import Dict, Any
 from dagster import ConfigurableResource
 
 
-
 class ModelDeploymentsConfigResource(ConfigurableResource):
     """Resource for loading the model deployments configuration file."""
 

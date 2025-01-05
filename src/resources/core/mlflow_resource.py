@@ -88,25 +88,31 @@ class MlflowResource(ConfigurableResource):
             f"{model.release}",
         )
         self.client().set_registered_model_alias(
-            registered_model_name,
-            f"{model.mlflow_deployment_alias}",
-            version
+            registered_model_name, f"{model.mlflow_deployment_alias}", version
         )
         domain = self.web_browser_uri or self.tracking_server_uri
         return f"{domain}/#/models/{registered_model_name}/versions/{version}"
 
-    def load_model(self, model_config: Dict[str, Any], avalanche_season: str, region_id: str) -> BaseMLModel:
+    def load_model(
+        self, model_config: Dict[str, Any], avalanche_season: str, region_id: str
+    ) -> BaseMLModel:
         """Load a deployed model from mlflow for the corresponding avalanche season and region ID."""
         mlflow.set_tracking_uri(self.tracking_server_uri)
         model_instance = ModelFactory.create_model_instance_from_config(model_config)
         model_instance.load(avalanche_season, region_id)
         return model_instance
 
-    def get_deployed_model_uri(self, model: BaseMLModel, avalanche_season: str, region_id: str) -> str:
+    def get_deployed_model_uri(
+        self, model: BaseMLModel, avalanche_season: str, region_id: str
+    ) -> str:
         """Get a browser accessible URI for the deployed model correspong to the avalanche season and region ID."""
         registered_model_name = model.id(avalanche_season, region_id)
-        version = self.client().get_model_version_by_alias(
-            model.id(avalanche_season, region_id), model.mlflow_deployment_alias
-        ).version
+        version = (
+            self.client()
+            .get_model_version_by_alias(
+                model.id(avalanche_season, region_id), model.mlflow_deployment_alias
+            )
+            .version
+        )
         domain = self.web_browser_uri or self.tracking_server_uri
         return f"{domain}/#/models/{registered_model_name}/versions/{version}"

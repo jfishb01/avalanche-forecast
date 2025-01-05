@@ -2,7 +2,10 @@ from typing import Sequence, Union, Any, cast
 import duckdb
 import pandas as pd
 from dagster import InputContext, OutputContext
-from dagster_duckdb_pandas import DuckDBPandasIOManager as LibraryDuckDBPandasIOManager, DuckDBPandasTypeHandler
+from dagster_duckdb_pandas import (
+    DuckDBPandasIOManager as LibraryDuckDBPandasIOManager,
+    DuckDBPandasTypeHandler,
+)
 from dagster_duckdb.io_manager import DuckDbClient
 from dagster._core.storage.db_io_manager import (
     DbIOManager,
@@ -42,11 +45,12 @@ class _DbIOManager(DbIOManager):
 
         self._check_supported_type(load_type)
 
-        table_slice = self._get_table_slice(context, cast(OutputContext, context.upstream_output))
+        table_slice = self._get_table_slice(
+            context, cast(OutputContext, context.upstream_output)
+        )
 
         with self._db_client.connect(context, table_slice) as conn:
             return self._handlers_by_type[load_type].load_input(context, table_slice, conn)  # type: ignore  # (pyright bug)
-
 
     def _get_table_slice(
         self, context: Union[OutputContext, InputContext], output_context: OutputContext
@@ -125,4 +129,6 @@ class _DuckDBPandasTypeHandler(DuckDBPandasTypeHandler):
         """Loads the input as a Pandas DataFrame."""
         if table_slice.partition_dimensions and len(context.asset_partition_keys) == 0:
             return pd.DataFrame()
-        return connection.execute(_DuckDbClient.get_select_statement(table_slice)).fetchdf()
+        return connection.execute(
+            _DuckDbClient.get_select_statement(table_slice)
+        ).fetchdf()
