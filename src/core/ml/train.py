@@ -69,8 +69,8 @@ def train_test_split(
         y_test = y_test[y_test.columns[0]]
 
     return (
-        X_train.values,
-        X_test.values,
-        y_train.values,
-        y_test.values,
+        X_train.values.astype(np.float32),
+        X_test.values.astype(np.float32),
+        y_train.values.astype(np.float32),
+        y_test.values.astype(np.float32),
     )

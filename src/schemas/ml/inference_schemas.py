@@ -12,6 +12,8 @@ class ForecastSchema(BaseMLSchema):
     avalanche_season: str
     region_id: str
     forecast: float
+    release: str
+    mlflow_model_uri: str
 
 
 ForecastSchemaDagsterType = pandera_schema_to_dagster_type(ForecastSchema)
