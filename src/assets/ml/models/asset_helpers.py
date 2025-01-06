@@ -1,6 +1,7 @@
 import pandas as pd
 import pandera as pa
 from datetime import timedelta
+from typing import Optional
 from dagster import (
     AssetExecutionContext,
     MaterializeResult,
@@ -57,6 +58,7 @@ def trained_model_asset(
 def model_inference_asset(
     context: AssetExecutionContext,
     model_name: str,
+    predict_params: Optional[dict] = None,
 ) -> pa.typing.DataFrame[ForecastSchema]:
     """Core asset logic for performing model inference for an avalanche season and region."""
     mlflow_resource = context.resources.mlflow_resource
@@ -71,7 +73,10 @@ def model_inference_asset(
     features = model.get_features(
         forecast_date, region_id, context.resources.duck_db_resource
     )
-    forecast = model.predict(None, features.values)
+    forecast = model.predict(None, features.values, predict_params)
+    mlflow_model_uri = mlflow_resource.get_deployed_model_uri(
+        model, avalanche_season, region_id
+    )
     df = pd.DataFrame(
         dict(
             run_id=context.run_id,
@@ -81,6 +86,8 @@ def model_inference_asset(
             avalanche_season=date_to_avalanche_season(forecast_date),
             region_id=region_id,
             forecast=forecast,
+            release=model.release,
+            mlflow_model_uri=mlflow_model_uri,
         )
     )
     context.add_output_metadata(

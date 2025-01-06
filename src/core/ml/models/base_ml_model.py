@@ -9,6 +9,8 @@ from typing import Dict, List, Any, Optional
 from dagster_duckdb import DuckDBResource
 from mlflow.models import model, set_model
 from mlflow.pyfunc import PythonModel, PythonModelContext, log_model, load_model
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
 
 from src.utils.datetime_helpers import get_avalanche_season_date_bounds
 
@@ -68,7 +70,7 @@ class BaseMLModel(PythonModel):
             model_input: A pyfunc-compatible input for the model to evaluate.
             params: Additional parameters to pass to the model for inference.
         """
-        return self.model.predict(model_input)
+        return self.model.predict(model_input.astype(np.float32), params)
 
     def log(self, avalanche_season: str, region_id: str) -> model.ModelInfo:
         """Log the model to MLflow for a run. Assumes that a run is currently active."""
@@ -166,6 +168,16 @@ class BaseMLModel(PythonModel):
                 ).df()
                 feature_dfs.append(features)
         return reduce(lambda x, y: pd.merge(x, y, hpw="inner"), feature_dfs)
+
+
+class BaseMLModelClassification(BaseMLModel):
+    def metrics(self, y_true: np.array, y_pred: np.array, **kwargs) -> Dict[str, float]:
+        return {
+            "accuracy_score": accuracy_score(y_true, y_pred),
+            "precision_score": precision_score(y_true, y_pred, average="macro"),
+            "recall_score": recall_score(y_true, y_pred, average="macro"),
+            "f1_score": f1_score(y_true, y_pred, average="macro"),
+        }
 
 
 class ModelFactory:
