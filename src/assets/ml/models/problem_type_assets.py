@@ -19,7 +19,10 @@ from src.assets.ml.models.asset_helpers import (
     trained_model_asset,
     model_prediction_asset,
 )
-from src.schemas.ml.prediction_schemas import PredictionSchema, PredictionSchemaDagsterType
+from src.schemas.ml.prediction_schemas import (
+    PredictionSchema,
+    PredictionSchemaDagsterType,
+)
 
 
 PROBLEM_0_MODEL_NAME = "problem_0"
