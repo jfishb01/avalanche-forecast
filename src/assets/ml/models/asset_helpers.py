@@ -1,3 +1,4 @@
+import base64
 import pandas as pd
 import pandera as pa
 from datetime import timedelta
@@ -16,7 +17,7 @@ from src.partitions import (
 )
 from src.core.ml.models.base_ml_model import ModelFactory
 from src.utils.datetime_helpers import date_to_avalanche_season
-from src.schemas.ml.inference_schemas import ForecastSchema
+from src.schemas.ml.prediction_schemas import PredictionSchema
 
 
 def trained_model_asset(
@@ -35,6 +36,7 @@ def trained_model_asset(
         model, avalanche_season, region_id, context.resources.duck_db_resource
     )
     metrics = model.metrics(y_test, y_pred)
+    artifacts = model.artifacts(y_test, y_pred)
     with mlflow_resource.start_run(model, avalanche_season, region_id) as run:
         run_uri = mlflow_resource.run_uri(run)
         model_uri = mlflow_resource.log_model(
@@ -42,9 +44,18 @@ def trained_model_asset(
             avalanche_season=avalanche_season,
             region_id=region_id,
             metrics=metrics,
+            artifacts=artifacts,
             y_test=y_test,
             y_pred=y_pred,
         )
+
+    # Assume all artifacts are png images and convert to Markdown to preview it within Dagster
+    artifacts_markdown = {
+        k: MetadataValue.md(
+            f"![img](data:image/png;base64,{base64.b64encode(v.getvalue()).decode()})"
+        )
+        for k, v, in artifacts.items()
+    }
     return MaterializeResult(
         metadata={
             "mlflow_run_uri": MetadataValue.url(run_uri),
@@ -52,15 +63,16 @@ def trained_model_asset(
             "release": model.release,
         }
         | metrics
+        | artifacts_markdown
     )
 
 
-def model_inference_asset(
+def model_prediction_asset(
     context: AssetExecutionContext,
     model_name: str,
     predict_params: Optional[dict] = None,
-) -> pa.typing.DataFrame[ForecastSchema]:
-    """Core asset logic for performing model inference for an avalanche season and region."""
+) -> pa.typing.DataFrame[PredictionSchema]:
+    """Core asset logic for performing model prediction for an avalanche season and region."""
     mlflow_resource = context.resources.mlflow_resource
     forecast_date, region_id = forecast_date_and_region_id_partitions_from_key(
         context.partition_key
@@ -99,4 +111,4 @@ def model_inference_asset(
             "forecast": float(forecast[0]),
         }
     )
-    return conform_to_schema(df, ForecastSchema)
+    return conform_to_schema(df, PredictionSchema)

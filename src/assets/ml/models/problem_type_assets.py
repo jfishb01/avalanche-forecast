@@ -17,9 +17,12 @@ from src.assets.ml.features_and_targets.avalanche_forecast_center_feature_assets
 )
 from src.assets.ml.models.asset_helpers import (
     trained_model_asset,
-    model_inference_asset,
+    model_prediction_asset,
 )
-from src.schemas.ml.inference_schemas import ForecastSchema, ForecastSchemaDagsterType
+from src.schemas.ml.prediction_schemas import (
+    PredictionSchema,
+    PredictionSchemaDagsterType,
+)
 
 
 PROBLEM_0_MODEL_NAME = "problem_0"
@@ -101,7 +104,7 @@ def problem_type_2_trained_model(
         "mlflow_resource",
         "model_deployments_config_resource",
     },
-    key_prefix="inference",
+    key_prefix="prediction",
     group_name="ml",
     compute_kind="python",
     partitions_def=daily_region_forecast_partitions_def,
@@ -113,14 +116,14 @@ def problem_type_2_trained_model(
         "schema": "forecasts",
     },
     deps=[avalanche_forecast_center_feature],
-    dagster_type=ForecastSchemaDagsterType,
+    dagster_type=PredictionSchemaDagsterType,
     automation_condition=AutomationCondition.eager(),
 )
-def problem_type_0_inference(
+def problem_type_0_prediction(
     context: AssetExecutionContext,
-) -> pa.typing.DataFrame[ForecastSchema]:
-    """Run inference for problem_type_0 and write the outputs to a database."""
-    return model_inference_asset(context, PROBLEM_0_MODEL_NAME)
+) -> pa.typing.DataFrame[PredictionSchema]:
+    """Generate predictions for problem_type_0 and write the outputs to a database."""
+    return model_prediction_asset(context, PROBLEM_0_MODEL_NAME)
 
 
 @asset(
@@ -131,7 +134,7 @@ def problem_type_0_inference(
         "mlflow_resource",
         "model_deployments_config_resource",
     },
-    key_prefix="inference",
+    key_prefix="prediction",
     group_name="ml",
     compute_kind="python",
     partitions_def=daily_region_forecast_partitions_def,
@@ -144,21 +147,21 @@ def problem_type_0_inference(
     },
     ins={
         "problem_type_0": AssetIn(
-            key=problem_type_0_inference.key,
-            dagster_type=ForecastSchemaDagsterType,
+            key=problem_type_0_prediction.key,
+            dagster_type=PredictionSchemaDagsterType,
             input_manager_key="duck_db_io_manager",
         ),
     },
     deps=[avalanche_forecast_center_feature],
-    dagster_type=ForecastSchemaDagsterType,
+    dagster_type=PredictionSchemaDagsterType,
     automation_condition=AutomationCondition.eager(),
 )
-def problem_type_1_inference(
+def problem_type_1_prediction(
     context: AssetExecutionContext,
-    problem_type_0: pa.typing.DataFrame[ForecastSchema],
-) -> pa.typing.DataFrame[ForecastSchema]:
-    """Run inference for problem_type_1 and write the outputs to a database."""
-    return model_inference_asset(
+    problem_type_0: pa.typing.DataFrame[PredictionSchema],
+) -> pa.typing.DataFrame[PredictionSchema]:
+    """Generate predictions for problem_type_1 and write the outputs to a database."""
+    return model_prediction_asset(
         context,
         PROBLEM_1_MODEL_NAME,
         predict_params={
@@ -175,7 +178,7 @@ def problem_type_1_inference(
         "mlflow_resource",
         "model_deployments_config_resource",
     },
-    key_prefix="inference",
+    key_prefix="prediction",
     group_name="ml",
     compute_kind="python",
     partitions_def=daily_region_forecast_partitions_def,
@@ -188,27 +191,27 @@ def problem_type_1_inference(
     },
     ins={
         "problem_type_0": AssetIn(
-            key=problem_type_0_inference.key,
-            dagster_type=ForecastSchemaDagsterType,
+            key=problem_type_0_prediction.key,
+            dagster_type=PredictionSchemaDagsterType,
             input_manager_key="duck_db_io_manager",
         ),
         "problem_type_1": AssetIn(
-            key=problem_type_1_inference.key,
-            dagster_type=ForecastSchemaDagsterType,
+            key=problem_type_1_prediction.key,
+            dagster_type=PredictionSchemaDagsterType,
             input_manager_key="duck_db_io_manager",
         ),
     },
     deps=[avalanche_forecast_center_feature],
-    dagster_type=ForecastSchemaDagsterType,
+    dagster_type=PredictionSchemaDagsterType,
     automation_condition=AutomationCondition.eager(),
 )
-def problem_type_2_inference(
+def problem_type_2_prediction(
     context: AssetExecutionContext,
-    problem_type_0: pa.typing.DataFrame[ForecastSchema],
-    problem_type_1: pa.typing.DataFrame[ForecastSchema],
-) -> pa.typing.DataFrame[ForecastSchema]:
-    """Run inference for problem_type_2 and write the outputs to a database."""
-    return model_inference_asset(
+    problem_type_0: pa.typing.DataFrame[PredictionSchema],
+    problem_type_1: pa.typing.DataFrame[PredictionSchema],
+) -> pa.typing.DataFrame[PredictionSchema]:
+    """Generate a prediction for problem_type_2 and write the outputs to a database."""
+    return model_prediction_asset(
         context,
         PROBLEM_2_MODEL_NAME,
         predict_params={

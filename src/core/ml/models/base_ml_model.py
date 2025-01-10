@@ -1,3 +1,4 @@
+import io
 import os
 import inspect
 import importlib
@@ -9,7 +10,13 @@ from typing import Dict, List, Any, Optional
 from dagster_duckdb import DuckDBResource
 from mlflow.models import model, set_model
 from mlflow.pyfunc import PythonModel, PythonModelContext, log_model, load_model
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    ConfusionMatrixDisplay,
+)
 
 
 from src.utils.datetime_helpers import get_avalanche_season_date_bounds
@@ -66,9 +73,9 @@ class BaseMLModel(PythonModel):
 
         Args:
             context: Optional PythonModelContext instance containing artifacts that the internal model can
-                use to perform inference.
+                use to generate a prediction.
             model_input: A pyfunc-compatible input for the model to evaluate.
-            params: Additional parameters to pass to the model for inference.
+            params: Additional parameters to pass to the model for prediction.
         """
         return self.model.predict(model_input.astype(np.float32), params)
 
@@ -91,7 +98,17 @@ class BaseMLModel(PythonModel):
         )
 
     def metrics(self, y_true: np.array, y_pred: np.array, **kwargs) -> Dict[str, float]:
-        raise NotImplementedError
+        """Dictionary of metrics to be displayed with Dagster materializations and MLFlow experiments."""
+        return {}
+
+    def artifacts(
+        self, y_true: np.array, y_pred: np.array, **kwargs
+    ) -> Dict[str, io.BytesIO]:
+        """Dictionary of artifacts to be displayed with Dagster materializations and MLFlow experiments.
+
+        Artifact values are assumed to be bytes of png images to be displayed.
+        """
+        return {}
 
     def get_targets_train(
         self, avalanche_season: str, region_id: str, db_resource: DuckDBResource
@@ -148,7 +165,7 @@ class BaseMLModel(PythonModel):
     def get_features(
         self, forecast_date: date, region_id: str, db_resource: DuckDBResource
     ) -> pd.DataFrame:
-        """Get features for model inference."""
+        """Get features for model prediction."""
         feature_dfs = []
         for feature_table, feature_columns in self.features.items():
             with db_resource.get_connection() as conn:
@@ -171,6 +188,22 @@ class BaseMLModel(PythonModel):
 
 
 class BaseMLModelClassification(BaseMLModel):
+    def __init__(
+        self,
+        model: object,
+        target: str,
+        features: Dict[str, List[str]],
+        classes: List[Any],
+        parameters: Dict[str, Any] = None,
+    ):
+        super().__init__(
+            target=target,
+            features=features,
+            model=model,
+            parameters=parameters,
+        )
+        self.classes = classes
+
     def metrics(self, y_true: np.array, y_pred: np.array, **kwargs) -> Dict[str, float]:
         return {
             "accuracy_score": accuracy_score(y_true, y_pred),
@@ -178,6 +211,17 @@ class BaseMLModelClassification(BaseMLModel):
             "recall_score": recall_score(y_true, y_pred, average="macro"),
             "f1_score": f1_score(y_true, y_pred, average="macro"),
         }
+
+    def artifacts(
+        self, y_true: np.array, y_pred: np.array, **kwargs
+    ) -> Dict[str, io.BytesIO]:
+        confusion_matrix = ConfusionMatrixDisplay.from_predictions(
+            y_true, y_pred, labels=self.classes
+        ).plot()
+        buf = io.BytesIO()
+        confusion_matrix.plot().figure_.savefig(buf, format="png")
+        buf.seek(0)
+        return {"confusion_matrix": buf}
 
 
 class ModelFactory:
