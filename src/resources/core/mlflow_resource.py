@@ -1,3 +1,4 @@
+import io
 import os
 import mlflow
 import tempfile
@@ -61,6 +62,7 @@ class MlflowResource(ConfigurableResource):
         avalanche_season: str,
         region_id: str,
         metrics: Dict[str, float],
+        artifacts: Dict[str, io.BytesIO],
         y_test: np.array,
         y_pred: np.array,
     ) -> str:
@@ -77,7 +79,10 @@ class MlflowResource(ConfigurableResource):
             pd.DataFrame({"y_test": y_test, "y_pred": y_pred}).to_csv(
                 predictions_file, index=False
             )
-            mlflow.log_artifact(predictions_file)
+            for k, buf in artifacts.items():
+                with open(os.path.join(tmp, f"{k}.png"), "wb") as f:
+                    f.write(buf.getvalue())
+            mlflow.log_artifacts(tmp)
 
         registered_model_name = logged_model.model_uri.split("/")[-1]
         version = str(logged_model.registered_model_version)

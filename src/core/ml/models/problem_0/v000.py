@@ -1,5 +1,6 @@
 from sklearn.tree import DecisionTreeClassifier
 
+from src.schemas.ingestion.avalanche_forecast_center_schemas import AvalancheProblemEnum
 from src.core.ml.models.base_ml_model import BaseMLModelClassification
 
 
@@ -15,5 +16,6 @@ class MlModelProblem0(BaseMLModelClassification):
             target="problem_0",
             features={"avalanche_forecast_center_feature": ["problem_0"]},
             model=DecisionTreeClassifier(**parameters),
+            classes=[problem.value for problem in AvalancheProblemEnum],
             parameters=parameters,
         )

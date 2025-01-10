@@ -4,7 +4,7 @@ from datetime import date
 from src.schemas.schema_config import BaseMLSchema
 
 
-class ForecastSchema(BaseMLSchema):
+class PredictionSchema(BaseMLSchema):
     """Pandera schema for model forecasts."""
 
     analysis_date: date
@@ -16,4 +16,4 @@ class ForecastSchema(BaseMLSchema):
     mlflow_model_uri: str
 
 
-ForecastSchemaDagsterType = pandera_schema_to_dagster_type(ForecastSchema)
+PredictionSchemaDagsterType = pandera_schema_to_dagster_type(PredictionSchema)

@@ -1,6 +1,6 @@
 [project]
 name = "avalanche-forecast"
-version = "0.6.0"
+version = "0.6.1"
 description = "Forecast regional avalanche risks and problem types using ML"
 readme = "README.md"
 requires-python = ">=3.12"
