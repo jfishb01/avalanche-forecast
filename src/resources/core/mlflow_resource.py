@@ -4,12 +4,13 @@ import mlflow
 import tempfile
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 from dagster import ConfigurableResource
 from contextlib import contextmanager
 from mlflow import MlflowClient
 from mlflow import ActiveRun
 
+from src.schemas.ml.model_config_schemas import ModelConfigSchema
 from src.core.ml.models.base_ml_model import BaseMLModel, ModelFactory
 
 
@@ -72,7 +73,7 @@ class MlflowResource(ConfigurableResource):
         was logged.
         """
         logged_model = model.log(avalanche_season, region_id)
-        mlflow.log_params(model.parameters | model.features)
+        mlflow.log_params(model.parameters or {} | model.features)
         mlflow.log_metrics(metrics)
         with tempfile.TemporaryDirectory() as tmp:
             predictions_file = os.path.join(tmp, "predictions.csv")
@@ -99,7 +100,7 @@ class MlflowResource(ConfigurableResource):
         return f"{domain}/#/models/{registered_model_name}/versions/{version}"
 
     def load_model(
-        self, model_config: Dict[str, Any], avalanche_season: str, region_id: str
+        self, model_config: ModelConfigSchema, avalanche_season: str, region_id: str
     ) -> BaseMLModel:
         """Load a deployed model from mlflow for the corresponding avalanche season and region ID."""
         mlflow.set_tracking_uri(self.tracking_server_uri)

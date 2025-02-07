@@ -1,7 +1,16 @@
 import math
 import statistics
 import numpy as np
+import pandas as pd
+import pandera as pa
 from typing import Tuple
+
+from src.schemas.ml.features_and_targets.aspect_component_schemas import (
+    AspectComponentSchema,
+)
+from src.schemas.ingestion.avalanche_forecast_center_schemas import (
+    AvalancheForecastCenterForecastSchema,
+)
 
 
 def convert_aspects_to_sin_cos_and_range(
@@ -29,7 +38,9 @@ def convert_aspects_to_sin_cos_and_range(
     aspects are impacted, the sin and cos values will both be returned as 0.0.
     """
     # Convert impacted aspect arguments to array.
-    impacted_aspects = np.array([n, ne, e, se, s, sw, w, nw]).astype(bool)
+    impacted_aspects = np.nan_to_num(np.array([n, ne, e, se, s, sw, w, nw])).astype(
+        bool
+    )
     aspect_radians = [
         (i * 2 * math.pi) / len(impacted_aspects)
         for i in range(len(impacted_aspects) + 1)
@@ -89,3 +100,38 @@ def convert_aspects_to_sin_cos_and_range(
     center_aspect_cos = math.cos(statistics.mean(center_aspect_radians))
     center_aspect_range = len(largest_contiguous_block) / len(impacted_aspects)
     return center_aspect_sin, center_aspect_cos, center_aspect_range
+
+
+def get_aspect_components(
+    avalanche_forecast_center_forecast: pa.typing.DataFrame[
+        AvalancheForecastCenterForecastSchema
+    ],
+) -> pa.typing.DataFrame[AspectComponentSchema]:
+    aspect_components = dict()
+    for _, row in avalanche_forecast_center_forecast.iterrows():
+        for problem_number in range(2):
+            for elevation in ("alp", "tln", "btl"):
+                aspect_sin, aspect_cos, aspect_range = (
+                    convert_aspects_to_sin_cos_and_range(
+                        **{
+                            aspect: f"{aspect}_{elevation}_{problem_number}"
+                            for aspect in ("n", "ne", "e", "se", "s", "sw", "w", "nw")
+                        }
+                    )
+                )
+                aspect_components[f"aspect_sin_{elevation}_{problem_number}"] = (
+                    aspect_components.get(
+                        f"aspect_sin_{elevation}_{problem_number}", []
+                    ) + [aspect_sin]
+                )
+                aspect_components[f"aspect_cos_{elevation}_{problem_number}"] = (
+                    aspect_components.get(
+                        f"aspect_cos_{elevation}_{problem_number}", []
+                    ) + [aspect_cos]
+                )
+                aspect_components[f"aspect_range_{elevation}_{problem_number}"] = (
+                    aspect_components.get(
+                        f"aspect_range_{elevation}_{problem_number}", []
+                    ) + [aspect_range]
+                )
+        return pd.DataFrame(aspect_components)
