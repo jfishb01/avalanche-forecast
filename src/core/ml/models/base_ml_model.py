@@ -5,7 +5,7 @@ import importlib
 import numpy as np
 import pandas as pd
 from datetime import date
-from functools import reduce
+from functools import reduce, partial
 from typing import Dict, List, Any, Optional
 from dagster_duckdb import DuckDBResource
 from mlflow.models import model, set_model
@@ -15,11 +15,16 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    mean_absolute_error,
+    mean_absolute_percentage_error,
+    root_mean_squared_error,
+    r2_score,
     ConfusionMatrixDisplay,
 )
 
 
 from src.utils.datetime_helpers import get_avalanche_season_date_bounds
+from src.schemas.ml.model_config_schemas import ModelConfigSchema
 
 
 class BaseMLModel(PythonModel):
@@ -77,7 +82,10 @@ class BaseMLModel(PythonModel):
             model_input: A pyfunc-compatible input for the model to evaluate.
             params: Additional parameters to pass to the model for prediction.
         """
-        return self.model.predict(model_input.astype(np.float32), params)
+        predict_fn = partial(self.model.predict, model_input.astype(np.float32))
+        if params is not None:
+            return predict_fn(params)
+        return predict_fn()
 
     def log(self, avalanche_season: str, region_id: str) -> model.ModelInfo:
         """Log the model to MLflow for a run. Assumes that a run is currently active."""
@@ -224,13 +232,35 @@ class BaseMLModelClassification(BaseMLModel):
         return {"confusion_matrix": buf}
 
 
+class BaseMLModelRegression(BaseMLModel):
+    def __init__(
+        self,
+        model: object,
+        target: str,
+        features: Dict[str, List[str]],
+        parameters: Dict[str, Any] = None,
+    ):
+        super().__init__(
+            target=target,
+            features=features,
+            model=model,
+            parameters=parameters,
+        )
+
+    def metrics(self, y_true: np.array, y_pred: np.array, **kwargs) -> Dict[str, float]:
+        return {
+            "MAE": mean_absolute_error(y_true, y_pred),
+            "MAPE": mean_absolute_percentage_error(y_true, y_pred),
+            "RMSE": root_mean_squared_error(y_true, y_pred),
+            "R2": r2_score(y_true, y_pred),
+        }
+
+
 class ModelFactory:
     @staticmethod
     def create_model_instance_from_config(
-        model_config: Dict[str, Any],
+        model_config: ModelConfigSchema,
     ) -> BaseMLModel:
         """Given a model deployment configuration, instantiate the corresponding model release."""
-        module = importlib.import_module(
-            f"src.core.ml.models.{model_config['model']}.{model_config['release']}"
-        )
-        return getattr(module, model_config["classname"])()
+        module = importlib.import_module(model_config.import_path)
+        return module.get_model(model_config.model_name)()

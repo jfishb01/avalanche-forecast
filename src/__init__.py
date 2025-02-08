@@ -19,6 +19,7 @@ from src.assets.ingestion import avalanche_forecast_center_assets
 from src.assets.ml.features_and_targets import target_assets
 from src.assets.ml.features_and_targets import avalanche_forecast_center_feature_assets
 from src.assets.ml.models import problem_type_assets
+from src.assets.ml.models import aspect_assets
 from src.schedules import ingestion_schedules
 from src.sensors.ingestion.avalanche_forecast_center_sensors import (
     raw_nwac_forecast_materialization_sensor,
@@ -52,6 +53,7 @@ def env_assets(env: str) -> Sequence[AssetsDefinition]:
             target_assets,
             avalanche_forecast_center_feature_assets,
             problem_type_assets,
+            aspect_assets,
         ]
     )
 
