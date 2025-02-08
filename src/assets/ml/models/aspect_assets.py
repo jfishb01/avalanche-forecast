@@ -48,11 +48,13 @@ def _aspect_component_trained_model_asset_factory(
             target,
             avalanche_forecast_center_feature,
         ],
+        description=(
+            f"Train a {model_name} model for an avalanche season and region and log the trained model to mlflow."
+        ),
     )
     def aspect_component_trained_model_asset(
         context: AssetExecutionContext,
     ) -> MaterializeResult:
-        f"""Train a {model_name} model for an avalanche season and region and log the trained model to mlflow."""
         return trained_model_asset(context, model_name)
 
     return aspect_component_trained_model_asset
@@ -95,13 +97,22 @@ def _aspect_component_prediction_asset_factory(
         deps=[avalanche_forecast_center_feature],
         dagster_type=PredictionSchemaDagsterType,
         automation_condition=AutomationCondition.eager(),
+        description=(
+            f"Generate a prediction for {model_name} and write the outputs to a database."
+        ),
     )
     def aspect_component_prediction_asset(
         context: AssetExecutionContext, **kwargs
     ) -> pa.typing.DataFrame[PredictionSchema]:
-        f"""Generate predictions for {model_name} and write the outputs to a database."""
+        upstream_problem_type_asset = kwargs[f"problem_type_{problem_number}"]
         return model_prediction_asset(
-            context, model_name, kwargs[f"problem_type_{problem_number}"]
+            context,
+            model_name,
+            predict_params={
+                f"problem_type_{problem_number}": upstream_problem_type_asset[
+                    "forecast"
+                ].values[0],
+            },
         )
 
     return aspect_component_prediction_asset
