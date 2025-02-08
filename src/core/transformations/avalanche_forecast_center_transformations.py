@@ -99,7 +99,11 @@ def convert_aspects_to_sin_cos_and_range(
     center_aspect_sin = math.sin(statistics.mean(center_aspect_radians))
     center_aspect_cos = math.cos(statistics.mean(center_aspect_radians))
     center_aspect_range = len(largest_contiguous_block) / len(impacted_aspects)
-    return center_aspect_sin, center_aspect_cos, center_aspect_range
+    return (
+        round(center_aspect_sin, 12),
+        round(center_aspect_cos, 12),
+        round(center_aspect_range, 12),
+    )
 
 
 def get_aspect_components(
@@ -109,12 +113,12 @@ def get_aspect_components(
 ) -> pa.typing.DataFrame[AspectComponentSchema]:
     aspect_components = dict()
     for _, row in avalanche_forecast_center_forecast.iterrows():
-        for problem_number in range(2):
+        for problem_number in range(3):
             for elevation in ("alp", "tln", "btl"):
                 aspect_sin, aspect_cos, aspect_range = (
                     convert_aspects_to_sin_cos_and_range(
                         **{
-                            aspect: f"{aspect}_{elevation}_{problem_number}"
+                            aspect: int(row[f"{aspect}_{elevation}_{problem_number}"])
                             for aspect in ("n", "ne", "e", "se", "s", "sw", "w", "nw")
                         }
                     )
@@ -122,16 +126,19 @@ def get_aspect_components(
                 aspect_components[f"aspect_sin_{elevation}_{problem_number}"] = (
                     aspect_components.get(
                         f"aspect_sin_{elevation}_{problem_number}", []
-                    ) + [aspect_sin]
+                    )
+                    + [aspect_sin]
                 )
                 aspect_components[f"aspect_cos_{elevation}_{problem_number}"] = (
                     aspect_components.get(
                         f"aspect_cos_{elevation}_{problem_number}", []
-                    ) + [aspect_cos]
+                    )
+                    + [aspect_cos]
                 )
                 aspect_components[f"aspect_range_{elevation}_{problem_number}"] = (
                     aspect_components.get(
                         f"aspect_range_{elevation}_{problem_number}", []
-                    ) + [aspect_range]
+                    )
+                    + [aspect_range]
                 )
-        return pd.DataFrame(aspect_components)
+    return pd.DataFrame(aspect_components)

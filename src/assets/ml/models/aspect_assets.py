@@ -113,7 +113,7 @@ aspect_component_trained_model_assets = [
     )
     for component in ("sin", "cos", "range")
     for elevation in ("alp", "tln", "btl")
-    for problem_number in range(2)
+    for problem_number in range(3)
 ]
 
 
@@ -125,5 +125,5 @@ aspect_component_prediction_assets = [
     )
     for component in ("sin", "cos", "range")
     for elevation in ("alp", "tln", "btl")
-    for problem_number in range(2)
+    for problem_number in range(3)
 ]

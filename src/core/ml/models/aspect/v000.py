@@ -12,7 +12,7 @@ def get_model(model_name: str):
         f"aspect_{component}_{elevation}_{problem_number}"
         for component in ("sin", "cos", "range")
         for elevation in ("alp", "tln", "btl")
-        for problem_number in range(2)
+        for problem_number in range(3)
     ]
     if model_name not in valid_model_names:
         raise ValueError(
