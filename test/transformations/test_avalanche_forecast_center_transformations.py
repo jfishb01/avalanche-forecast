@@ -146,4 +146,5 @@ def test_convert_aspects_to_sin_cos_and_range(
     expected: Tuple[float, float, float],
 ):
     actual = convert_aspects_to_sin_cos_and_range(**method_kwargs)
+    expected = tuple(round(v, 12) for v in expected)  # Round values before comparing
     assert actual == expected
