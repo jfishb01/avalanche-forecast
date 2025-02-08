@@ -111,6 +111,7 @@ def get_aspect_components(
         AvalancheForecastCenterForecastSchema
     ],
 ) -> pa.typing.DataFrame[AspectComponentSchema]:
+    """Get the aspect sin cos and range values for each elevation and problem type."""
     aspect_components = dict()
     for _, row in avalanche_forecast_center_forecast.iterrows():
         for problem_number in range(3):

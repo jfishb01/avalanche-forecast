@@ -30,6 +30,7 @@ from src.schemas.ml.prediction_schemas import (
 def _aspect_component_trained_model_asset_factory(
     aspect_component: str, elevation: str, problem_number: int
 ) -> AssetsDefinition:
+    """Factory creating asset definitions that train models of problem aspect components."""
     model_name = f"aspect_{aspect_component}_{elevation}_{problem_number}"
 
     @asset(
@@ -60,6 +61,7 @@ def _aspect_component_trained_model_asset_factory(
 def _aspect_component_prediction_asset_factory(
     aspect_component: str, elevation: str, problem_number: int
 ) -> AssetsDefinition:
+    """Factory creating asset definitions that predict problem aspect components."""
     model_name = f"aspect_{aspect_component}_{elevation}_{problem_number}"
 
     @asset(

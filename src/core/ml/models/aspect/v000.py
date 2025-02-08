@@ -8,6 +8,7 @@ from src.schemas.ingestion.avalanche_forecast_center_schemas import AvalanchePro
 
 
 def get_model(model_name: str):
+    """Get the corresponding aspect component model class according to the model name."""
     valid_model_names = [
         f"aspect_{component}_{elevation}_{problem_number}"
         for component in ("sin", "cos", "range")
@@ -51,8 +52,8 @@ def get_model(model_name: str):
             """Generates a forecast for the aspect component for the corresponding elevation and problem number.
 
             If `problem_type` is in the params dictionary and has a value of NOFORECAST, then the predicted
-            value will be 0.0. The `problem_type` params argument will be defined during inference as the
-            asset dependencies are maintained and will be left empty during model training.
+            value will be 0.0. This only applies during prediction as the `problem_type` params argument will
+            be left empty during model training.
             """
             params = params or {}
             if params.get("problem_type", -1) == AvalancheProblemEnum.NOFORECAST:
