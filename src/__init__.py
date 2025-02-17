@@ -4,7 +4,6 @@ from typing import Dict, Union, Sequence
 from dagster import (
     load_assets_from_modules,
     Definitions,
-    ExperimentalWarning,
     ConfigurableResource,
     ConfigurableIOManager,
     AssetsDefinition,
@@ -38,8 +37,6 @@ from src.resources.extraction.avalanche_information_center_resources import (
     CAICResource,
     NWACResource,
 )
-
-warnings.filterwarnings("ignore", category=ExperimentalWarning)
 
 
 env = os.getenv("DEFINITIONS", "DEV").upper()
