@@ -247,9 +247,9 @@ class BaseMLModel(PythonModel):
                 feature_dfs.append(features)
         feature_df = reduce(lambda x, y: pd.merge(x, y, hpw="inner"), feature_dfs)
         if self.target_dependencies_as_features:
-            feature_df[[f"target.{c}" for c in self.target_dependencies_as_features]] = (
-                np.nan
-            )
+            feature_df[
+                [f"target.{c}" for c in self.target_dependencies_as_features]
+            ] = np.nan
         return feature_df
 
     def _filter_avalanche_forecast_center_features_by_predicted_problem_type(
