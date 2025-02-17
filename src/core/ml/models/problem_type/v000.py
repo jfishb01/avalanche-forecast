@@ -1,3 +1,5 @@
+"""Use the prior day's problem type forecast published by the avalanche forecast center as features."""
+
 import numpy as np
 from typing import Optional
 from mlflow.pyfunc import PythonModelContext
@@ -9,14 +11,14 @@ from src.core.ml.models.base_ml_model import BaseMLModelClassification
 
 def get_model(model_name: str):
     return {
-        "problem_0": MlModelProblem0,
-        "problem_1": MlModelProblem1,
-        "problem_2": MlModelProblem2,
+        "problem_type_0": MlModelProblemType0,
+        "problem_type_1": MlModelProblemType1,
+        "problem_type_2": MlModelProblemType2,
     }[model_name]
 
 
-class MlModelProblem0(BaseMLModelClassification):
-    """Decision tree classifier model for problem 0.
+class MlModelProblemType0(BaseMLModelClassification):
+    """Decision tree classifier model for problem type 0.
 
     Uses the prior day's forecast published by the avalanche forecast center as a feature.
     """
@@ -24,16 +26,16 @@ class MlModelProblem0(BaseMLModelClassification):
     def __init__(self):
         parameters = dict(random_state=42)
         super().__init__(
-            target="problem_0",
-            features={"avalanche_forecast_center_feature": ["problem_0"]},
+            target="problem_type_0",
+            features={"avalanche_forecast_center_feature": ["problem_type_0"]},
             model=DecisionTreeClassifier(**parameters),
             classes=[problem.value for problem in AvalancheProblemEnum],
             parameters=parameters,
         )
 
 
-class MlModelProblem1(BaseMLModelClassification):
-    """Decision tree classifier model for problem 1.
+class MlModelProblemType1(BaseMLModelClassification):
+    """Decision tree classifier model for problem type 1.
 
     Uses the prior day's forecast published by the avalanche forecast center as a feature.
     """
@@ -41,12 +43,12 @@ class MlModelProblem1(BaseMLModelClassification):
     def __init__(self):
         parameters = dict(random_state=np.random.RandomState(seed=42))
         super().__init__(
-            target="problem_1",
+            target="problem_type_1",
             features={
                 "avalanche_forecast_center_feature": [
-                    "problem_0",
-                    "problem_1",
-                    "problem_2",
+                    "problem_type_0",
+                    "problem_type_1",
+                    "problem_type_2",
                 ]
             },
             model=DecisionTreeClassifier(**parameters),
@@ -84,8 +86,8 @@ class MlModelProblem1(BaseMLModelClassification):
                 return forecast
 
 
-class MlModelProblem2(BaseMLModelClassification):
-    """Decision tree classifier model for problem 2.
+class MlModelProblemType2(BaseMLModelClassification):
+    """Decision tree classifier model for problem type 2.
 
     Uses the prior day's forecast published by the avalanche forecast center as a feature.
     """
@@ -93,12 +95,12 @@ class MlModelProblem2(BaseMLModelClassification):
     def __init__(self):
         parameters = dict(random_state=np.random.RandomState(seed=42))
         super().__init__(
-            target="problem_2",
+            target="problem_type_2",
             features={
                 "avalanche_forecast_center_feature": [
-                    "problem_0",
-                    "problem_1",
-                    "problem_2",
+                    "problem_type_0",
+                    "problem_type_1",
+                    "problem_type_2",
                 ]
             },
             model=DecisionTreeClassifier(**parameters),

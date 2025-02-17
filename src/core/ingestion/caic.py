@@ -95,7 +95,7 @@ def transform(
 
                 # Standardize some field values that have been observed to not conform to known keys.
                 region_forecast |= {
-                    f"problem_{problem_number}": AvalancheProblemEnum[
+                    f"problem_type_{problem_number}": AvalancheProblemEnum[
                         problem["type"].upper().replace("DRYLOOSE", "LOOSEDRY")
                     ],
                     f"likelihood_{problem_number}": AvalancheLikelihoodEnum[

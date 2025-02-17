@@ -109,7 +109,7 @@ def transform(
                 continue
             problem_number = problem["rank"] - 1
             region_forecast |= {
-                f"problem_{problem_number}": problem["avalanche_problem_id"],
+                f"problem_type_{problem_number}": problem["avalanche_problem_id"],
                 f"likelihood_{problem_number}": AvalancheLikelihoodEnum[
                     problem["likelihood"].replace(" ", "").upper()
                 ],

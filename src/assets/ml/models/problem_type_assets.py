@@ -25,9 +25,9 @@ from src.schemas.ml.prediction_schemas import (
 )
 
 
-PROBLEM_0_MODEL_NAME = "problem_0"
-PROBLEM_1_MODEL_NAME = "problem_1"
-PROBLEM_2_MODEL_NAME = "problem_2"
+PROBLEM_TYPE_0_MODEL_NAME = "problem_type_0"
+PROBLEM_TYPE_1_MODEL_NAME = "problem_type_1"
+PROBLEM_TYPE_2_MODEL_NAME = "problem_type_2"
 
 
 @asset(
@@ -48,8 +48,8 @@ PROBLEM_2_MODEL_NAME = "problem_2"
 def problem_type_0_trained_model(
     context: AssetExecutionContext,
 ) -> MaterializeResult:
-    """Train a problem_0 model for an avalanche season and region and log the trained model to mlflow."""
-    return trained_model_asset(context, PROBLEM_0_MODEL_NAME)
+    """Train a problem_type_0 model for an avalanche season and region and log the trained model to mlflow."""
+    return trained_model_asset(context, PROBLEM_TYPE_0_MODEL_NAME)
 
 
 @asset(
@@ -70,8 +70,8 @@ def problem_type_0_trained_model(
 def problem_type_1_trained_model(
     context: AssetExecutionContext,
 ) -> MaterializeResult:
-    """Train a problem_1 model for an avalanche season and region and log the trained model to mlflow."""
-    return trained_model_asset(context, PROBLEM_1_MODEL_NAME)
+    """Train a problem_type_1 model for an avalanche season and region and log the trained model to mlflow."""
+    return trained_model_asset(context, PROBLEM_TYPE_1_MODEL_NAME)
 
 
 @asset(
@@ -92,8 +92,8 @@ def problem_type_1_trained_model(
 def problem_type_2_trained_model(
     context: AssetExecutionContext,
 ) -> MaterializeResult:
-    """Train a problem_2 model for an avalanche season and region and log the trained model to mlflow."""
-    return trained_model_asset(context, PROBLEM_2_MODEL_NAME)
+    """Train a problem_type_2 model for an avalanche season and region and log the trained model to mlflow."""
+    return trained_model_asset(context, PROBLEM_TYPE_2_MODEL_NAME)
 
 
 @asset(
@@ -123,7 +123,7 @@ def problem_type_0_prediction(
     context: AssetExecutionContext,
 ) -> pa.typing.DataFrame[PredictionSchema]:
     """Generate predictions for problem_type_0 and write the outputs to a database."""
-    return model_prediction_asset(context, PROBLEM_0_MODEL_NAME)
+    return model_prediction_asset(context, PROBLEM_TYPE_0_MODEL_NAME)
 
 
 @asset(
@@ -163,7 +163,7 @@ def problem_type_1_prediction(
     """Generate predictions for problem_type_1 and write the outputs to a database."""
     return model_prediction_asset(
         context,
-        PROBLEM_1_MODEL_NAME,
+        PROBLEM_TYPE_1_MODEL_NAME,
         predict_params={
             "problem_type_0": problem_type_0["forecast"].values[0],
         },
@@ -213,7 +213,7 @@ def problem_type_2_prediction(
     """Generate a prediction for problem_type_2 and write the outputs to a database."""
     return model_prediction_asset(
         context,
-        PROBLEM_2_MODEL_NAME,
+        PROBLEM_TYPE_2_MODEL_NAME,
         predict_params={
             "problem_type_0": float(problem_type_0["forecast"].values[0]),
             "problem_type_1": float(problem_type_1["forecast"].values[0]),
