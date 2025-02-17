@@ -1,3 +1,5 @@
+"""Use the prior day's problem type and aspect forecasts published by the avalanche forecast center as features."""
+
 import numpy as np
 from typing import Optional
 from mlflow.pyfunc import PythonModelContext
@@ -28,7 +30,7 @@ def get_model(model_name: str):
                 target=model_name,
                 features={
                     "avalanche_forecast_center_feature": [
-                        f"problem_{problem_number}",
+                        f"problem_type_{problem_number}",
                         f"aspect_sin_alp_{problem_number}",
                         f"aspect_cos_alp_{problem_number}",
                         f"aspect_range_alp_{problem_number}",

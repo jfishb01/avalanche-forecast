@@ -32,7 +32,8 @@ def train_model(
     y_pred = model.predict(None, X_test)
 
     # Infer the model signature
-    model.signature = infer_signature(X_test, y_pred)
+    if model.signature is None:
+        model.signature = infer_signature(X_test, y_pred)
 
     return y_test, y_pred
 
