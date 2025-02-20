@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional
 from dagster_duckdb import DuckDBResource
 from mlflow.models import model, set_model, signature
 from mlflow.pyfunc import PythonModel, PythonModelContext, log_model, load_model
+import matplotlib.pyplot as plt
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -385,6 +386,26 @@ class BaseMLModelRegression(BaseMLModel):
             "MAPE": mean_absolute_percentage_error(y_true, y_pred),
             "RMSE": root_mean_squared_error(y_true, y_pred),
             "R2": r2_score(y_true, y_pred),
+        }
+
+    def artifacts(
+        self, y_true: np.array, y_pred: np.array, **kwargs
+    ) -> Dict[str, io.BytesIO]:
+        # Generate a scatter plot of actual vs predicted values
+        m, b = np.polyfit(y_true, y_pred, 1)
+        r2 = r2_score(y_true, y_pred)
+        plt.plot(y_true, y_pred, "b.")  # Create a scatter plot of blue circle markers
+        plt.xlabel("Actual")
+        plt.ylabel("Predicted")
+        plt.title(f"Actual vs Predicted (r2={round(r2, 3)})")
+        plt.plot(
+            y_true, (m * y_true) + b, color="black", linewidth=1
+        )  # plot the line of best fit
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+        return {
+            "actual_vs_predicted_scatter": buf,
         }
 
 
